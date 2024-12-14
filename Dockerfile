@@ -1,9 +1,11 @@
-# Use an official Node.js image as the base
+Use an official Node.js image as the base
 FROM node:18-slim
 
 # Install WireGuard and networking tools
 RUN apt-get update && apt-get install -y \
     wireguard \
+    wireguard-tools \
+    ufw \
     iproute2 \
     iptables \
     iputils-ping \
@@ -25,7 +27,7 @@ COPY . .
 RUN npm run build
 
 # Expose the port for the application (if applicable)
-EXPOSE 4000
+EXPOSE 8000
 
 # Command to run the application
 CMD ["npm", "run", "start"]
