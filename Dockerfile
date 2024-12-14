@@ -1,4 +1,4 @@
-Use an official Node.js image as the base
+#Use an official Node.js image as the base
 FROM node:18-slim
 
 # Install WireGuard and networking tools
