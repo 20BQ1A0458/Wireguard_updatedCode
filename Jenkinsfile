@@ -45,7 +45,7 @@ pipeline {
                     ]
                 ]) {
                     echo 'Deploying application to Kubernetes...'
-                    sh "kubectl apply -f deployment-service.yml"
+                    sh "kubectl apply -f deployment-service.yaml"
                     sh "kubectl rollout restart deployment/node-wireguard -n auth"
                 }
             }
