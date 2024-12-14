@@ -35,7 +35,7 @@ pipeline {
         stage('Push Docker Image') {
             when {
                 anyOf {
-                    branch 'master'
+                    branch 'main'
                     expression { env.BRANCH_NAME.startsWith('release/') }
                     branch 'staging'
                     branch 'production'
@@ -55,7 +55,7 @@ pipeline {
                         """
 
                         // If it's master or release, also tag and push as stable
-                        if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME.startsWith('release/')) {
+                        if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME.startsWith('release/')) {
                             echo "Tagging and pushing as stable..."
                             sh """
                                 docker tag ${dockerImageWithRepo} ${stableImageWithRepo}
@@ -91,9 +91,9 @@ pipeline {
             }
         }
 
-        stage('Deploy to Master') {
+        stage('Deploy to Main') {
             when {
-                branch 'master'
+                branch 'main'
             }
             steps {
                 withKubeCredentials(kubectlCredentials: [
@@ -106,7 +106,7 @@ pipeline {
                         serverUrl: 'https://7302D1DF066773D16142E09F2D140FC0.sk1.ap-south-2.eks.amazonaws.com'
                     ]
                 ]) {
-                    echo "Deploying version ${DOCKER_TAG} to Master Kubernetes environment..."
+                    echo "Deploying version ${DOCKER_TAG} to Main Kubernetes environment..."
                     sh """
                         kubectl set image deployment.apps/authservice authservice=${DOCKER_USERNAME.toLowerCase()}/${DOCKER_IMAGE.toLowerCase()}:${DOCKER_TAG} -n ${K8S_NAMESPACE}
                         kubectl rollout status deployment.apps/authservice -n ${K8S_NAMESPACE}
@@ -142,7 +142,7 @@ pipeline {
         stage('Verify Deployment') {
             when {
                 anyOf {
-                    branch 'master'
+                    branch 'main'
                     branch 'staging'
                     branch 'production'
                 }
