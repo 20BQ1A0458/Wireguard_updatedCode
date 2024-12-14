@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: node_wireguard
     ports:
-      - "8000:8000" # Map the container's port 3000 to host's port 3000
+      - "4000:4000" 
       - "51820:51820/udp" # Map the container's port 51820 to host's port 51820/udp
     cap_add:
       - NET_ADMIN # Required for network administration capabilities
