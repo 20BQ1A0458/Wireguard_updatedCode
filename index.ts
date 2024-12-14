@@ -166,9 +166,9 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
 //   }
 // });
 
-app.listen(8000, async () => {
+app.listen(4000, async () => {
   try {
-    console.log("Server is running on http://0.0.0.0:8000");
+    console.log("Server is running on http://0.0.0.0:4000");
     const { privateKey, publicKey } = await generateKeys();
     await saveKeys(privateKey, publicKey);
     await createConfigFile(privateKey);
