@@ -2,13 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'node-wireguard' // Name of the Docker image
-        DOCKER_USERNAME = 'bhargavram458' // Docker Hub username
-        VERSION_PREFIX = '0.0.' // Version prefix for tagging
-        TIMESTAMP = new Date().format("yyyyMMdd'T'HHmmss") // Date-Time format: YYYYMMDD'T'HHMMSS
-        DOCKER_TAG = "${VERSION_PREFIX}${BUILD_NUMBER}-${TIMESTAMP}" // Final tag format
-        STABLE_TAG = 'stable' // Tag for the stable version
-        K8S_NAMESPACE = 'auth' // Namespace for Kubernetes
+        DOCKER_IMAGE = 'node-wireguard'
+        DOCKER_TAG = 'latest'
     }
 
     stages {
@@ -21,56 +16,23 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build and Push Docker Image') {
             steps {
                 script {
-                    echo "Building Docker image for branch: ${env.BRANCH_NAME}..."
-                    sh """
-                        docker build -t ${DOCKER_USERNAME.toLowerCase()}/${DOCKER_IMAGE.toLowerCase()}:${DOCKER_TAG} .
-                    """
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            when {
-                anyOf {
-                    branch 'main'
-                    expression { env.BRANCH_NAME.startsWith('release/') }
-                    branch 'staging'
-                    branch 'production'
-                }
-            }
-            steps {
-                script {
-                    echo 'Pushing Docker image to Docker Hub...'
+                    echo 'Building and pushing Docker image to Docker Hub...'
                     withCredentials([usernamePassword(credentialsId: 'docker-credentials-id', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        def dockerImageWithRepo = "${DOCKER_USERNAME.toLowerCase()}/${DOCKER_IMAGE.toLowerCase()}:${DOCKER_TAG}"
-                        def stableImageWithRepo = "${DOCKER_USERNAME.toLowerCase()}/${DOCKER_IMAGE.toLowerCase()}:${STABLE_TAG}"
-
-                        // Push image with version tag
+                        def dockerImageWithRepo = "${DOCKER_USERNAME.toLowerCase()}/${env.DOCKER_IMAGE.toLowerCase()}:${env.DOCKER_TAG.toLowerCase()}"
                         sh """
                             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                            docker build -t ${dockerImageWithRepo} .
                             docker push ${dockerImageWithRepo}
                         """
-
-                        // If it's master or release, also tag and push as stable
-                        if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME.startsWith('release/')) {
-                            echo "Tagging and pushing as stable..."
-                            sh """
-                                docker tag ${dockerImageWithRepo} ${stableImageWithRepo}
-                                docker push ${stableImageWithRepo}
-                            """
-                        }
                     }
                 }
             }
         }
 
-        stage('Deploy to Staging') {
-            when {
-                branch 'staging'
-            }
+        stage('Deploy to Kubernetes') {
             steps {
                 withKubeCredentials(kubectlCredentials: [
                     [
@@ -82,71 +44,14 @@ pipeline {
                         serverUrl: 'https://7302D1DF066773D16142E09F2D140FC0.sk1.ap-south-2.eks.amazonaws.com'
                     ]
                 ]) {
-                    echo "Deploying version ${DOCKER_TAG} to Staging Kubernetes environment..."
-                    sh """
-                        kubectl set image deployment.apps/authservice authservice=${DOCKER_USERNAME.toLowerCase()}/${DOCKER_IMAGE.toLowerCase()}:${DOCKER_TAG} -n ${K8S_NAMESPACE}
-                        kubectl rollout status deployment.apps/authservice -n ${K8S_NAMESPACE}
-                    """
-                }
-            }
-        }
-
-        stage('Deploy to Main') {
-            when {
-                branch 'main'
-            }
-            steps {
-                withKubeCredentials(kubectlCredentials: [
-                    [
-                        caCertificate: '', 
-                        clusterName: 'EKS-1', 
-                        contextName: '', 
-                        credentialsId: 'k8-token', 
-                        namespace: 'auth', 
-                        serverUrl: 'https://7302D1DF066773D16142E09F2D140FC0.sk1.ap-south-2.eks.amazonaws.com'
-                    ]
-                ]) {
-                    echo "Deploying version ${DOCKER_TAG} to Main Kubernetes environment..."
-                    sh """
-                        kubectl set image deployment.apps/authservice authservice=${DOCKER_USERNAME.toLowerCase()}/${DOCKER_IMAGE.toLowerCase()}:${DOCKER_TAG} -n ${K8S_NAMESPACE}
-                        kubectl rollout status deployment.apps/authservice -n ${K8S_NAMESPACE}
-                    """
-                }
-            }
-        }
-
-        stage('Deploy to Production') {
-            when {
-                branch 'production'
-            }
-            steps {
-                withKubeCredentials(kubectlCredentials: [
-                    [
-                        caCertificate: '', 
-                        clusterName: 'EKS-1', 
-                        contextName: '', 
-                        credentialsId: 'k8-token', 
-                        namespace: 'auth', 
-                        serverUrl: 'https://7302D1DF066773D16142E09F2D140FC0.sk1.ap-south-2.eks.amazonaws.com'
-                    ]
-                ]) {
-                    echo "Deploying version ${DOCKER_TAG} to Production Kubernetes environment..."
-                    sh """
-                        kubectl set image deployment.apps/authservice authservice=${DOCKER_USERNAME.toLowerCase()}/${DOCKER_IMAGE.toLowerCase()}:${DOCKER_TAG} -n ${K8S_NAMESPACE}
-                        kubectl rollout status deployment.apps/authservice -n ${K8S_NAMESPACE}
-                    """
+                    echo 'Deploying application to Kubernetes...'
+                    sh "kubectl apply -f deployment-service.yml"
+                    sh "kubectl rollout restart deployment/node-wireguard -n auth"
                 }
             }
         }
 
         stage('Verify Deployment') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'staging'
-                    branch 'production'
-                }
-            }
             steps {
                 withKubeCredentials(kubectlCredentials: [
                     [
@@ -159,22 +64,21 @@ pipeline {
                     ]
                 ]) {
                     echo 'Verifying deployment...'
-                    sh "kubectl get all -n ${K8S_NAMESPACE}"
+                    sh "kubectl get all -n auth"
                 }
             }
         }
-
-   }
+    }
 
     post {
         always {
             echo 'Pipeline execution completed!'
         }
         success {
-            echo "Docker image version ${DOCKER_TAG} built and processed successfully!"
+            echo 'Docker image built and pushed successfully to Docker Hub!'
         }
         failure {
-            echo "An error occurred during the pipeline execution."
+            echo 'An error occurred during the pipeline execution.'
         }
     }
 }
