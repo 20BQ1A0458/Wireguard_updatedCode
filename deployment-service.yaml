@@ -34,8 +34,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: node-wireguard
-annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # Ensure you're using Network Load Balancer for AWS
 spec:
   type: LoadBalancer
   selector:
