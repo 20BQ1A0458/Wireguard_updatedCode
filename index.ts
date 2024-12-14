@@ -54,10 +54,10 @@ PrivateKey = ${privateKey}
 Address = 10.8.0.1/24
 ListenPort = 51820
 SaveConfig = true
-PostUp = ufw route allow in on wg0 out on enX0
-PostUp = iptables -t nat -I POSTROUTING -o enX0 -j MASQUERADE
-PreDown = ufw route delete allow in on wg0 out on enX0
-PreDown = iptables -t nat -D POSTROUTING -o enX0 -j MASQUERADE
+PostUp = ufw route allow in on wg0 out on eth+
+PostUp = iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE
+PreDown = ufw route delete allow in on wg0 out on eth+
+PreDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
 `;
   await fs.writeFile(CONFIG_PATH, configContent, { mode: 0o600 });
 };
