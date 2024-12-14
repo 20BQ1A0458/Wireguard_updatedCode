@@ -1,1 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-wireguard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-wireguard
+  template:
+    metadata:
+      labels:
+        app: node-wireguard
+    spec:
+      containers:
+        - name: node-wireguard
+          image: bhargavram458/node-wireguard:latest
+          ports:
+            - containerPort: 4000 # Node.js app
+              protocol: TCP
+            - containerPort: 51820 # WireGuard
+              protocol: UDP
+          env:
+            - name: NODE_ENV
+              value: production
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-wireguard
+spec:
+  type: LoadBalancer
+  selector:
+    app: node-wireguard
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4000
+      targetPort: 4000
+    - name: wireguard
+      protocol: UDP
+      port: 51820
+      targetPort: 51820
 
