@@ -3,7 +3,7 @@ import { exec } from "child_process";
 import { promises as fs } from "fs";
 import { IPPoolManager, createIPPoolManager } from "./ipPoolManager";
 
-const isKubernetes = true;
+const isKubernetes = false;
 
 const app = express();
 app.use(express.json());
@@ -30,7 +30,7 @@ const executeCommand = (command: string): Promise<string> =>
 const getRandomIndex = async (): Promise<number> => {
   try {
     const indexOutput = await executeCommand(
-      "kubectl get pods -n auth | grep wireguard | wc -l"
+      "kubectl get pods -n auth -o jsonpath='{.items[*].metadata.name}' | grep -o 'wireguard-[^ ]*' | wc -l"
     );
     const index = parseInt(indexOutput, 10);
 
@@ -64,14 +64,11 @@ const addPeerWithKubernetes = async (
       throw new Error("Invalid input provided to addPeerWithKubernetes");
     }
 
-    const command = `kubectl exec wireguard-${index} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
+    const command = `kubectl exec -n auth wireguard-${index} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command);
     await executeCommand("wg-quick save wg0");
   } catch (error) {
-    console.error(
-      "Error in addPeerWithKubernetes:",
-      error instanceof Error ? error.message : error
-    );
+    console.error("Error in addPeerWithKubernetes:", error instanceof Error ? error.message : error);
     throw error;
   }
 };
@@ -85,14 +82,11 @@ const removePeerWithKubernetes = async (
       throw new Error("Invalid input provided to removePeerWithKubernetes");
     }
 
-    const command = `kubectl exec wireguard-${index} -- wg set wg0 peer ${clientPublicKey} remove`;
+    const command = `kubectl exec -n auth wireguard-${index} -- wg set wg0 peer ${clientPublicKey} remove`;
     await executeCommand(command);
     await executeCommand("wg-quick save wg0");
   } catch (error) {
-    console.error(
-      "Error in removePeerWithKubernetes:",
-      error instanceof Error ? error.message : error
-    );
+    console.error("Error in removePeerWithKubernetes:", error instanceof Error ? error.message : error);
     throw error;
   }
 };
@@ -120,10 +114,10 @@ PrivateKey = ${privateKey}
 Address = 10.8.0.1/24
 ListenPort = 51820
 SaveConfig = true
-PostUp = ufw route allow in on wg0 out on eth+
-PostUp = iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE
-PreDown = ufw route delete allow in on wg0 out on eth+
-PreDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
+PostUp = ufw route allow in on wg0 out on enX0
+PostUp = iptables -t nat -I POSTROUTING -o enX0 -j MASQUERADE
+PreDown = ufw route delete allow in on wg0 out on enX0
+PreDown = iptables -t nat -D POSTROUTING -o enX0 -j MASQUERADE
 `;
   await fs.writeFile(CONFIG_PATH, configContent, { mode: 0o600 });
 };
