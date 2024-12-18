@@ -16,24 +16,43 @@ spec:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
           ports:
-            - containerPort: 4000 # Node.js app
+            - containerPort: 8000 # Node.js app (updated to match Docker Compose)
               protocol: TCP
             - containerPort: 51820 # WireGuard
               protocol: UDP
           env:
-            - name: NODE_ENV
-              value: production
+            - name: ISKUBERNETES
+              value: "true" # Updated for Kubernetes
+            - name: ADDRESS
+              value: "10.0.0.0" # Match Docker Compose
+            - name: PORT
+              value: "8000" # Match Docker Compose
+            - name: REDIS_URL
+              value: "redis://redis:6379" # Redis URL
           securityContext:
             capabilities:
               add:
                 - NET_ADMIN
+          volumeMounts:
+            - name: wireguard-config
+              mountPath: /etc/wireguard # Mount WireGuard config
+      volumes:
+        - name: wireguard-config
+          hostPath:
+            path: /path/to/your/wireguard/config # Replace with actual host path
+  # Redis sidecar container (optional for simplicity in Kubernetes)
+        - name: redis
+          image: redis:latest
+          ports:
+            - containerPort: 6379
+              protocol: TCP
 
 ---
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: node-wireguard-tcp
+  name: node-wireguard-http
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
@@ -43,9 +62,11 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 4000
-      targetPort: 4000
+      port: 8000
+      targetPort: 8000
+
 ---
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -55,26 +76,9 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    app: node-wireguard-0
+    app: node-wireguard
   ports:
     - name: wireguard
       protocol: UDP
       port: 51820
       targetPort: 51820
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: node-wireguard-udp-1
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-spec:
-  type: LoadBalancer
-  selector:
-    app: node-wireguard
-  ports:
-    - name: wireguard
-      protocol: UDP
-      port: 51821
-      targetPort: 51821
-
