@@ -16,42 +16,24 @@ spec:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
           ports:
-            - containerPort: 8000 # Node.js app
+            - containerPort: 4000 # Node.js app
               protocol: TCP
             - containerPort: 51820 # WireGuard
               protocol: UDP
           env:
-            - name: ISKUBERNETES
-              value: "true"
-            - name: ADDRESS
-              value: "10.0.0.0"
-            - name: PORT
-              value: "8000"
-            - name: REDIS_URL
-              value: "redis://localhost:6379"
+            - name: NODE_ENV
+              value: production
           securityContext:
             capabilities:
               add:
                 - NET_ADMIN
-          volumeMounts:
-            - name: wireguard-config
-              mountPath: /etc/wireguard # Mount WireGuard config
-        - name: redis
-          image: redis:latest
-          ports:
-            - containerPort: 6379
-              protocol: TCP
-      volumes:
-        - name: wireguard-config
-          hostPath:
-            path: /path/to/your/wireguard/config # Replace with actual host path
 
 ---
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: node-wireguard-http
+  name: node-wireguard-tcp
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
@@ -61,11 +43,9 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 8000
-      targetPort: 8000
-
+      port: 4000
+      targetPort: 4000
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -75,7 +55,71 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
+    app: node-wireguard-0
+  ports:
+    - name: wireguard
+      protocol: UDP
+      port: 51820
+      targetPort: 51820
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-wireguard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: node-wireguard
+  template:
+    metadata:
+      labels:
+        app: node-wireguard
+    spec:
+      containers:
+        - name: node-wireguard
+          image: bhargavram458/node-wireguard:latest
+          ports:
+            - containerPort: 4000 # Node.js app
+              protocol: TCP
+            - containerPort: 51820 # WireGuard
+              protocol: UDP
+          env:
+            - name: NODE_ENV
+              value: production
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-wireguard-tcp
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: LoadBalancer
+  selector:
     app: node-wireguard
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4000
+      targetPort: 4000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-wireguard-udp
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: LoadBalancer
+  selector:
+    app: node-wireguard-0
   ports:
     - name: wireguard
       protocol: UDP
