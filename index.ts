@@ -3,7 +3,7 @@ import { exec } from "child_process";
 import { promises as fs } from "fs";
 import { IPPoolManager, createIPPoolManager } from "./ipPoolManager";
 
-const isKubernetes = false;
+const isKubernetes = true;
 
 const app = express();
 app.use(express.json());
