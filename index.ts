@@ -64,11 +64,14 @@ const addPeerWithKubernetes = async (
       throw new Error("Invalid input provided to addPeerWithKubernetes");
     }
 
-    const command = kubectl exec wireguard-${index} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32;
+    const command = `kubectl exec wireguard-${index} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command);
     await executeCommand("wg-quick save wg0");
   } catch (error) {
-    console.error("Error in addPeerWithKubernetes:", error instanceof Error ? error.message : error);
+    console.error(
+      "Error in addPeerWithKubernetes:",
+      error instanceof Error ? error.message : error
+    );
     throw error;
   }
 };
@@ -82,11 +85,14 @@ const removePeerWithKubernetes = async (
       throw new Error("Invalid input provided to removePeerWithKubernetes");
     }
 
-    const command = kubectl exec wireguard-${index} -- wg set wg0 peer ${clientPublicKey} remove;
+    const command = `kubectl exec wireguard-${index} -- wg set wg0 peer ${clientPublicKey} remove`;
     await executeCommand(command);
     await executeCommand("wg-quick save wg0");
   } catch (error) {
-    console.error("Error in removePeerWithKubernetes:", error instanceof Error ? error.message : error);
+    console.error(
+      "Error in removePeerWithKubernetes:",
+      error instanceof Error ? error.message : error
+    );
     throw error;
   }
 };
@@ -96,7 +102,7 @@ const generateKeys = async (): Promise<{
   publicKey: string;
 }> => {
   const privateKey = await executeCommand("wg genkey");
-  const publicKey = await executeCommand(echo ${privateKey} | wg pubkey);
+  const publicKey = await executeCommand(`echo ${privateKey} | wg pubkey`);
   return { privateKey, publicKey };
 };
 
@@ -130,7 +136,7 @@ const addPeer = async (
   clientPublicKey: string,
   assignedIP: string
 ): Promise<void> => {
-  const command = wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32;
+  const command = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
   await executeCommand(command);
   await executeCommand("wg-quick save wg0");
 };
@@ -197,7 +203,7 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
       const randomIndex = await getRandomIndex();
       await removePeerWithKubernetes(clientPublicKey, randomIndex);
     } else {
-      await executeCommand(wg set wg0 peer ${clientPublicKey} remove);
+      await executeCommand(`wg set wg0 peer ${clientPublicKey} remove`);
     }
 
     const success = poolManager.removePeer(clientPublicKey);
