@@ -16,19 +16,19 @@ spec:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
           ports:
-            - containerPort: 8000 # Node.js app (updated to match Docker Compose)
+            - containerPort: 8000 # Node.js app
               protocol: TCP
             - containerPort: 51820 # WireGuard
               protocol: UDP
           env:
             - name: ISKUBERNETES
-              value: "true" # Updated for Kubernetes
+              value: "true"
             - name: ADDRESS
-              value: "10.0.0.0" # Match Docker Compose
+              value: "10.0.0.0"
             - name: PORT
-              value: "8000" # Match Docker Compose
+              value: "8000"
             - name: REDIS_URL
-              value: "redis://redis:6379" # Redis URL
+              value: "redis://localhost:6379"
           securityContext:
             capabilities:
               add:
@@ -36,16 +36,15 @@ spec:
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard # Mount WireGuard config
-      volumes:
-        - name: wireguard-config
-          hostPath:
-            path: /path/to/your/wireguard/config # Replace with actual host path
-  # Redis sidecar container (optional for simplicity in Kubernetes)
         - name: redis
           image: redis:latest
           ports:
             - containerPort: 6379
               protocol: TCP
+      volumes:
+        - name: wireguard-config
+          hostPath:
+            path: /path/to/your/wireguard/config # Replace with actual host path
 
 ---
 
