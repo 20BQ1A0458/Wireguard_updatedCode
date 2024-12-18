@@ -30,7 +30,7 @@ const executeCommand = (command: string): Promise<string> =>
 const getRandomIndex = async (): Promise<number> => {
   try {
     const indexOutput = await executeCommand(
-      "kubectl get pods | grep wireguard | wc -l"
+      "kubectl get pods -n auth | grep wireguard | wc -l"
     );
     const index = parseInt(indexOutput, 10);
 
