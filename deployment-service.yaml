@@ -40,17 +40,11 @@ spec:
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
 
-              # Extract pod index from pod name (last part of the name)
-              POD_INDEX=$(echo $POD_NAME | sed -E 's/.*-([a-z0-9]+)$/\1/')
+              # Extract pod index directly from pod name (expecting 'node-wireguard-0' or 'node-wireguard-1')
+              POD_INDEX=$(echo $POD_NAME | sed -E 's/.*-(.*)/\1/')
               echo "Extracted POD_INDEX=$POD_INDEX"
-              # Check if POD_INDEX extraction failed and set to default
-              if [[ -z "$POD_INDEX" ]]; then
-                POD_INDEX=1  # Fallback to default if extraction fails
-              fi
-              echo "Using POD_INDEX=$POD_INDEX"
-
               # Calculate ListenPort dynamically based on the pod index (start at 51820)
-              LISTEN_PORT=$((51820 + ${POD_INDEX} - 1))  # Subtract 1 to start at 51820
+              LISTEN_PORT=$((51820 + ${POD_INDEX}))
               echo "Calculated LISTEN_PORT=$LISTEN_PORT"
 
               # Save keys and configuration to /etc/wireguard
@@ -72,7 +66,7 @@ spec:
             privileged: true
             capabilities:
               add:
-                - NET_ADMIN
+                - NET_ADMIN  
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
@@ -105,7 +99,6 @@ spec:
       volumes:
         - name: wireguard-config
           emptyDir: {}  # Temporary volume for storing WireGuard config files
-
 ---
 apiVersion: v1
 kind: Service
@@ -124,7 +117,6 @@ spec:
       protocol: TCP
       port: 4000
       targetPort: 4000
-
 ---
 apiVersion: v1
 kind: Service
