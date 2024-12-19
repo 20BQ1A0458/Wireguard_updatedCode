@@ -43,6 +43,11 @@ spec:
               # Extract pod index from pod name (last part of the name)
               POD_INDEX=$(echo $POD_NAME | sed -E 's/.*-([a-z0-9]+)$/\1/')
               echo "Extracted POD_INDEX=$POD_INDEX"
+              # Check if POD_INDEX extraction failed and set to default
+              if [[ -z "$POD_INDEX" ]]; then
+                POD_INDEX=1  # Fallback to default if extraction fails
+              fi
+              echo "Using POD_INDEX=$POD_INDEX"
 
               # Calculate ListenPort dynamically based on the pod index (start at 51820)
               LISTEN_PORT=$((51820 + ${POD_INDEX}))
