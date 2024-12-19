@@ -50,7 +50,7 @@ spec:
               echo "Using POD_INDEX=$POD_INDEX"
 
               # Calculate ListenPort dynamically based on the pod index (start at 51820)
-              LISTEN_PORT=$((51820 + ${POD_INDEX}))
+              LISTEN_PORT=$((51820 + ${POD_INDEX} - 1))  # Subtract 1 to start at 51820
               echo "Calculated LISTEN_PORT=$LISTEN_PORT"
 
               # Save keys and configuration to /etc/wireguard
@@ -72,7 +72,7 @@ spec:
             privileged: true
             capabilities:
               add:
-                - NET_ADMIN  
+                - NET_ADMIN
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
@@ -105,6 +105,7 @@ spec:
       volumes:
         - name: wireguard-config
           emptyDir: {}  # Temporary volume for storing WireGuard config files
+
 ---
 apiVersion: v1
 kind: Service
@@ -123,6 +124,7 @@ spec:
       protocol: TCP
       port: 4000
       targetPort: 4000
+
 ---
 apiVersion: v1
 kind: Service
