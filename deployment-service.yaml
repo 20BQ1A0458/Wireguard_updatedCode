@@ -1,8 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: auth  # Create the 'auth' namespace if it doesn't already exist
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: node-wireguard
-  namespace: auth  # Specify namespace if needed
+  namespace: auth
 spec:
   replicas: 2
   selector:
@@ -14,7 +19,38 @@ spec:
         app: node-wireguard
     spec:
       serviceAccountName: jenkins  # Ensure the pod uses the 'jenkins' service account
-      hostNetwork: true            # Enable host network access for WireGuard
+      hostNetwork: true  # Enable host network access for WireGuard
+      initContainers:
+        - name: wireguard-setup
+          image: ubuntu:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              apt-get update && apt-get install -y \
+                wireguard \
+                wireguard-tools \
+                iproute2 \
+                iptables \
+                iputils-ping \
+                curl \
+                && apt-get clean && rm -rf /var/lib/apt/lists/*
+              # Generate WireGuard private and public keys
+              PRIVATE_KEY=$(wg genkey)
+              PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
+              # Get pod index from environment variable or pod name
+              POD_INDEX=$((${POD_INDEX:-0} + 51820))  # Dynamic port generation (51820 + podIndex)
+              # Save the keys and configuration
+              echo $PRIVATE_KEY > /etc/wireguard/privatekey
+              echo $PUBLIC_KEY > /etc/wireguard/publickey
+              echo "[Interface]" > /etc/wireguard/wg0.conf
+              echo "PrivateKey=$(cat /etc/wireguard/privatekey)" >> /etc/wireguard/wg0.conf
+              echo "Address=10.8.0.$((POD_INDEX + 2))/24" >> /etc/wireguard/wg0.conf
+              echo "ListenPort=$POD_INDEX" >> /etc/wireguard/wg0.conf
+          volumeMounts:
+            - name: wireguard-config
+              mountPath: /etc/wireguard
+
       containers:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
@@ -23,9 +59,15 @@ spec:
               protocol: TCP
             - containerPort: 51820  # WireGuard UDP port
               protocol: UDP
+            - containerPort: 51821  # WireGuard UDP port
+              protocol: UDP
           env:
             - name: NODE_ENV
               value: production
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name  # Expose pod name to the container
           securityContext:
             capabilities:
               add:
@@ -33,17 +75,16 @@ spec:
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard  # Mount WireGuard config into the container
+
       volumes:
         - name: wireguard-config
-          emptyDir: {}  # Empty directory for storing WireGuard config files
-          # Alternatively, use a persistent volume if needed
-
+          emptyDir: {}  # Temporary volume for storing WireGuard config files
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: node-wireguard-tcp
-  namespace: auth  # Specify namespace if needed
+  namespace: auth
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # Ensure NLB is used
     service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Make it internet-facing
@@ -56,13 +97,12 @@ spec:
       protocol: TCP
       port: 4000
       targetPort: 4000
-
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: node-wireguard-udp
-  namespace: auth  # Specify namespace if needed
+  namespace: auth
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
     service.beta.kubernetes.io/aws-load-balancer-internal: "false"
