@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: auth
+  name: auth  # Create the 'auth' namespace if it doesn't already exist
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -9,7 +9,7 @@ metadata:
   name: node-wireguard
   namespace: auth
 spec:
-  serviceName: "node-wireguard-service"  # Define a service name for stable network identity
+  serviceName: "node-wireguard"  # Required field for StatefulSet
   replicas: 2
   selector:
     matchLabels:
@@ -19,8 +19,8 @@ spec:
       labels:
         app: node-wireguard
     spec:
-      serviceAccountName: jenkins
-      hostNetwork: true
+      serviceAccountName: jenkins  # Ensure the pod uses the 'jenkins' service account
+      hostNetwork: true  # Enable host network access for WireGuard
       initContainers:
         - name: wireguard-setup
           image: ubuntu:latest
@@ -72,20 +72,19 @@ spec:
             privileged: true
             capabilities:
               add:
-                - NET_ADMIN
+                - NET_ADMIN  
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
-
       containers:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
           ports:
-            - containerPort: 4000
+            - containerPort: 4000   # Node.js app
               protocol: TCP
-            - containerPort: 51820
+            - containerPort: 51820  # WireGuard UDP port
               protocol: UDP
-            - containerPort: 51821
+            - containerPort: 51821  # WireGuard UDP port
               protocol: UDP
           env:
             - name: NODE_ENV
@@ -93,19 +92,18 @@ spec:
             - name: POD_NAME
               valueFrom:
                 fieldRef:
-                  fieldPath: metadata.name
+                  fieldPath: metadata.name  # Expose pod name to the container
           securityContext:
             capabilities:
               add:
-                - NET_ADMIN
+                - NET_ADMIN  # Required for WireGuard operation
           volumeMounts:
             - name: wireguard-config
-              mountPath: /etc/wireguard
+              mountPath: /etc/wireguard  # Mount WireGuard config into the container
 
       volumes:
         - name: wireguard-config
-          emptyDir: {}
-
+          emptyDir: {}  # Temporary volume for storing WireGuard config files
 ---
 apiVersion: v1
 kind: Service
@@ -113,8 +111,8 @@ metadata:
   name: node-wireguard-tcp
   namespace: auth
   annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-internal: "false"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # Ensure NLB is used
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Make it internet-facing
 spec:
   type: LoadBalancer
   selector:
@@ -124,7 +122,6 @@ spec:
       protocol: TCP
       port: 4000
       targetPort: 4000
-
 ---
 apiVersion: v1
 kind: Service
