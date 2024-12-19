@@ -35,18 +35,28 @@ spec:
                 iputils-ping \
                 curl \
                 && apt-get clean && rm -rf /var/lib/apt/lists/*
+
               # Generate WireGuard private and public keys
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
-              # Get pod index from environment variable or pod name
-              POD_INDEX=$((${POD_NAME##*-} + 51820))  # Dynamic port generation (51820 + podIndex)
-              # Save the keys and configuration
+
+              # Extract pod index from pod name (last part of the name)
+              POD_INDEX=$(echo $POD_NAME | sed -E 's/.*-([a-z0-9]+)$/\1/')
+              echo "Extracted POD_INDEX=$POD_INDEX"
+
+              # Calculate ListenPort dynamically based on the pod index (start at 51820)
+              LISTEN_PORT=$((51820 + $(echo $POD_INDEX | tr -cd '0-9')))
+              echo "Calculated LISTEN_PORT=$LISTEN_PORT"
+
+              # Save keys and configuration to /etc/wireguard
               echo $PRIVATE_KEY > /etc/wireguard/privatekey
               echo $PUBLIC_KEY > /etc/wireguard/publickey
               echo "[Interface]" > /etc/wireguard/wg0.conf
               echo "PrivateKey=$(cat /etc/wireguard/privatekey)" >> /etc/wireguard/wg0.conf
               echo "Address=10.8.0.1/24" >> /etc/wireguard/wg0.conf
-              echo "ListenPort=$POD_INDEX" >> /etc/wireguard/wg0.conf
+              echo "ListenPort=$LISTEN_PORT" >> /etc/wireguard/wg0.conf
+
+              # Bring up the WireGuard interface
               wg-quick up wg0
           securityContext:
             privileged: true
