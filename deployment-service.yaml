@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: node-wireguard
+  namespace: auth  # Specify namespace if needed
 spec:
   replicas: 2
   selector:
@@ -22,6 +23,8 @@ spec:
               protocol: TCP
             - containerPort: 51820  # WireGuard UDP port
               protocol: UDP
+            - containerPort: 51821  # WireGuard additional UDP port (if needed)
+              protocol: UDP
           env:
             - name: NODE_ENV
               value: production
@@ -35,15 +38,17 @@ spec:
       volumes:
         - name: wireguard-config
           emptyDir: {}  # Empty directory for storing WireGuard config files
+          # Alternatively, use a persistent volume if needed
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: node-wireguard-tcp
+  namespace: auth  # Specify namespace if needed
   annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb" # Ensure NLB is used
-    service.beta.kubernetes.io/aws-load-balancer-internal: "false" # Explicitly make it internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # Ensure NLB is used
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Make it internet-facing
 spec:
   type: LoadBalancer
   selector:
@@ -59,6 +64,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: node-wireguard-udp
+  namespace: auth  # Specify namespace if needed
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
     service.beta.kubernetes.io/aws-load-balancer-internal: "false"
@@ -75,7 +81,3 @@ spec:
       protocol: UDP
       port: 51821
       targetPort: 51821
-    - name: udp-traffic-51822
-      protocol: UDP
-      port: 51822
-      targetPort: 51822
