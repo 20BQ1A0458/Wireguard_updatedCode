@@ -1,113 +1,84 @@
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: node-wireguard
-  namespace: auth
-spec:
-  serviceName: "node-wireguard"
-  replicas: 2
-  selector:
-    matchLabels:
-      app: node-wireguard
-  template:
-    metadata:
-      labels:
-        app: node-wireguard
-    spec:
-      serviceAccountName: jenkins
-      hostNetwork: true
-      initContainers:
-        - name: wireguard-setup
-          image: ubuntu:latest
-          command:
-            - /bin/bash
-            - -c
-            - |
-              apt-get update && apt-get install -y \
-                wireguard \
-                wireguard-tools \
-                iproute2 \
-                iptables \
-                iputils-ping \
-                curl \
-                && apt-get clean && rm -rf /var/lib/apt/lists/*
+pipeline {
+    agent any
 
-              # Generate WireGuard private and public keys
-              PRIVATE_KEY=$(wg genkey)
-              PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
+    environment {
+        DOCKER_IMAGE = 'node-wireguard'
+        DOCKER_TAG = 'latest'
+    }
 
-              # Use the pod's hostname as POD_NAME
-              POD_NAME=$(hostname)
-              echo "POD_NAME=$POD_NAME"
-              
-              # Extract pod index directly from pod name (expecting 'node-wireguard-0' or 'node-wireguard-1')
-              POD_INDEX=$(echo $POD_NAME | sed -E 's/.*-(.*)/\1/')
-              echo "Extracted POD_INDEX=$POD_INDEX"
+    stages {
+        stage('Checkout Code') {
+            steps {
+                script {
+                    echo "Checking out code from branch: ${env.BRANCH_NAME}"
+                    checkout scm
+                }
+            }
+        }
 
-              # Calculate ListenPort dynamically based on the pod index (51820 for pod 0, 51821 for pod 1)
-              LISTEN_PORT=$((51820 + ${POD_INDEX}))
-              echo "Calculated LISTEN_PORT=$LISTEN_PORT"
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    echo 'Building and pushing Docker image to Docker Hub...'
+                    withCredentials([usernamePassword(credentialsId: 'docker-credentials-id', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        def dockerImageWithRepo = "${DOCKER_USERNAME.toLowerCase()}/${env.DOCKER_IMAGE.toLowerCase()}:${env.DOCKER_TAG.toLowerCase()}"
+                        sh """
+                            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                            docker build -t ${dockerImageWithRepo} .
+                            docker push ${dockerImageWithRepo}
+                        """
+                    }
+                }
+            }
+        }
 
-              # Save keys and configuration to /etc/wireguard
-              echo $PRIVATE_KEY > /etc/wireguard/privatekey
-              echo $PUBLIC_KEY > /etc/wireguard/publickey
+        stage('Deploy to Kubernetes') {
+            steps {
+                withKubeCredentials(kubectlCredentials: [
+                    [
+                        caCertificate: '', 
+                        clusterName: 'EKS-1', 
+                        contextName: '', 
+                        credentialsId: 'k8-token', 
+                        namespace: 'auth', 
+                        serverUrl: 'https://7302D1DF066773D16142E09F2D140FC0.sk1.ap-south-2.eks.amazonaws.com'
+                    ]
+                ]) {
+                    echo 'Deploying application to Kubernetes...'
+                    sh "kubectl apply -f deployment-service.yaml"
+                    sh "kubectl rollout restart statefulset/node-wireguard -n auth"
+                }
+            }
+        }
 
-              # Write the WireGuard configuration file
-              echo "[Interface]" > /etc/wireguard/wg0.conf
-              echo "PrivateKey=$(cat /etc/wireguard/privatekey)" >> /etc/wireguard/wg0.conf
-              echo "Address=10.8.0.1/24" >> /etc/wireguard/wg0.conf
-              
-              # Conditionally set ListenPort if it’s missing or empty
-              current_listen_port=$(grep 'ListenPort=' /etc/wireguard/wg0.conf)
-              if [[ -z "$current_listen_port" ]]; then
-                echo "ListenPort=$LISTEN_PORT" >> /etc/wireguard/wg0.conf
-                echo "ListenPort was missing. Set to $LISTEN_PORT"
-              else
-                echo "ListenPort already set to $current_listen_port"
-              fi
+        stage('Verify Deployment') {
+            steps {
+                withKubeCredentials(kubectlCredentials: [
+                    [
+                        caCertificate: '', 
+                        clusterName: 'EKS-1', 
+                        contextName: '', 
+                        credentialsId: 'k8-token', 
+                        namespace: 'auth', 
+                        serverUrl: 'https://7302D1DF066773D16142E09F2D140FC0.sk1.ap-south-2.eks.amazonaws.com'
+                    ]
+                ]) {
+                    echo 'Verifying deployment...'
+                    sh "kubectl get all -n auth"
+                }
+            }
+        }
+    }
 
-              cat /etc/wireguard/wg0.conf
-
-              # Bring up the WireGuard interface
-              if ! wg show wg0 > /dev/null 2>&1; then
-                wg-quick up wg0
-              else
-                echo "WireGuard interface wg0 is already up."
-              fi
-          securityContext:
-            privileged: true
-            capabilities:
-              add:
-                - NET_ADMIN  
-          volumeMounts:
-            - name: wireguard-config
-              mountPath: /etc/wireguard
-
-      containers:
-        - name: node-wireguard
-          image: bhargavram458/node-wireguard:latest
-          ports:
-            - containerPort: 4000   # Node.js app
-              protocol: TCP
-            - containerPort: 51820  # WireGuard UDP port
-              protocol: UDP
-            - containerPort: 51821  # WireGuard UDP port
-              protocol: UDP
-          env:
-            - name: NODE_ENV
-              value: production
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name  # Expose pod name to the container
-          securityContext:
-            capabilities:
-              add:
-                - NET_ADMIN  # Required for WireGuard operation
-          volumeMounts:
-            - name: wireguard-config
-              mountPath: /etc/wireguard  # Mount WireGuard config into the container
-
-      volumes:
-        - name: wireguard-config
-          emptyDir: {}  # Temporary volume for storing WireGuard config files
+    post {
+        always {
+            echo 'Pipeline execution completed!'
+        }
+        success {
+            echo 'Docker image built and pushed successfully to Docker Hub!'
+        }
+        failure {
+            echo 'An error occurred during the pipeline execution.'
+        }
+    }
+}
