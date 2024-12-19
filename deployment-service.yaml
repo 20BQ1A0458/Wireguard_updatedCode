@@ -71,3 +71,11 @@ spec:
       protocol: UDP
       port: 51820
       targetPort: 51820
+    - name: udp-traffic
+      protocol: UDP
+      port: 51821
+      targetPort: 51821
+    - name: udp-traffic
+      protocol: UDP
+      port: 51822
+      targetPort: 51822
