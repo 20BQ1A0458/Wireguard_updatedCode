@@ -50,9 +50,10 @@ const getRandomIndex = async (): Promise<number> => {
     throw error;
   }
 };
+
 const getRandomPort = (index: number): number => {
     return 51820 + index;
-  };
+};
 
 const getPodName = async (index: number): Promise<string> => {
   const output = await executeCommand(
@@ -68,7 +69,6 @@ const getPodName = async (index: number): Promise<string> => {
   return podNames[index];
 };
 
-
 const addPeerWithKubernetes = async (
     clientPublicKey: string,
     assignedIP: string,
@@ -79,7 +79,7 @@ const addPeerWithKubernetes = async (
         throw new Error("Invalid input provided to addPeerWithKubernetes");
       }
   
-      const command = wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32;
+      const command = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
       await executeCommand(command);
       await executeCommand("wg-quick save wg0");
     } catch (error) {
@@ -88,7 +88,7 @@ const addPeerWithKubernetes = async (
     }
   };
   
-  const removePeerWithKubernetes = async (
+const removePeerWithKubernetes = async (
     clientPublicKey: string,
     index: number
   ): Promise<void> => {
@@ -97,7 +97,7 @@ const addPeerWithKubernetes = async (
         throw new Error("Invalid input provided to removePeerWithKubernetes");
       }
   
-      const command = wg set wg0 peer ${clientPublicKey} remove;
+      const command = `wg set wg0 peer ${clientPublicKey} remove`;
       await executeCommand(command);
       await executeCommand("wg-quick save wg0");
     } catch (error) {
@@ -112,7 +112,7 @@ const generateKeys = async (): Promise<{
   publicKey: string;
 }> => {
   const privateKey = await executeCommand("wg genkey");
-  const publicKey = await executeCommand(echo ${privateKey} | wg pubkey);
+  const publicKey = await executeCommand(`echo ${privateKey} | wg pubkey`);
   return { privateKey, publicKey };
 };
 
@@ -162,7 +162,7 @@ const addPeer = async (clientPublicKey: string, assignedIP: string): Promise<voi
       throw new Error("Invalid input provided to addPeer");
     }
 
-    const command = "wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32";
+    const command = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command);
   } catch (error) {
     console.error("Error in addPeer:", error instanceof Error ? error.message : error);
@@ -228,7 +228,7 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
         const randomIndex = await getRandomIndex();
         await removePeerWithKubernetes(clientPublicKey, randomIndex);
       } else {
-        await executeCommand(wg set wg0 peer ${clientPublicKey} remove);
+        await executeCommand(`wg set wg0 peer ${clientPublicKey} remove`);
       }
   
       const success = poolManager.removePeer(clientPublicKey);
@@ -251,7 +251,7 @@ app.listen(4000, async () => {
   const { privateKey, publicKey } = await generateKeys();
   await saveKeys(privateKey, publicKey);
   
-  if(isKubernetes) {
+  if (isKubernetes) {
     const randomIndex = await getRandomIndex();
     const randomPort = getRandomPort(randomIndex);
     await createConfigFileWithKubernetes(privateKey, randomPort);
@@ -260,5 +260,4 @@ app.listen(4000, async () => {
   }
   await setupWireGuardInterface();
   console.log("WireGuard interface is up and running.");
-
 });
