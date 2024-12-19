@@ -137,6 +137,8 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
       const randomIndex = await getRandomIndex();
       const podName = await getPodName(randomIndex);
 
+      console.log(podName);
+
       await addPeerWithKubernetes(clientPublicKey, assignedIP, podName);
 
       response = {
