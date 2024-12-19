@@ -111,3 +111,45 @@ spec:
       volumes:
         - name: wireguard-config
           emptyDir: {}  # Temporary volume for storing WireGuard config files
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-wireguard-tcp
+  namespace: auth
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # Ensure NLB is used
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Make it internet-facing
+spec:
+  type: LoadBalancer
+  selector:
+    app: node-wireguard
+  ports:
+    - name: tcp-traffic
+      protocol: TCP
+      port: 4000
+      targetPort: 4000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-wireguard-udp
+  namespace: auth
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"
+spec:
+  type: LoadBalancer
+  selector:
+    app: node-wireguard
+  ports:
+    - name: udp-traffic-51820
+      protocol: UDP
+      port: 51820
+      targetPort: 51820
+    - name: udp-traffic-51821
+      protocol: UDP
+      port: 51821
+      targetPort: 51821
