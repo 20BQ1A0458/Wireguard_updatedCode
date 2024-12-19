@@ -33,20 +33,15 @@ const getRandomIndex = async (): Promise<number> => {
       "kubectl get pods -n auth -o jsonpath='{.items[*].metadata.name}'"
     );
 
-    // Parse pod names that match node-wireguard
     const podNames = output.split(" ").filter((name) => name.startsWith("node-wireguard"));
 
     if (podNames.length === 0) {
       throw new Error("No WireGuard pods found with the prefix 'node-wireguard'");
     }
 
-    const randomIndex = Math.floor(Math.random() * podNames.length);
-    return randomIndex;
+    return Math.floor(Math.random() * podNames.length);
   } catch (error) {
-    console.error(
-      "Error fetching index:",
-      error instanceof Error ? error.message : error
-    );
+    console.error("Error fetching index:", error instanceof Error ? error.message : error);
     throw error;
   }
 };
@@ -71,11 +66,7 @@ const addPeerWithKubernetes = async (
   podName: string
 ): Promise<void> => {
   try {
-    if (!clientPublicKey || !assignedIP || !podName) {
-      throw new Error("Invalid input provided to addPeerWithKubernetes");
-    }
-
-    const command = kubectl exec -n auth ${podName} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32;
+    const command = `kubectl exec -n auth ${podName} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command);
   } catch (error) {
     console.error("Error in addPeerWithKubernetes:", error instanceof Error ? error.message : error);
@@ -88,11 +79,7 @@ const removePeerWithKubernetes = async (
   podName: string
 ): Promise<void> => {
   try {
-    if (!clientPublicKey || !podName) {
-      throw new Error("Invalid input provided to removePeerWithKubernetes");
-    }
-
-    const command = kubectl exec -n auth ${podName} -- wg set wg0 peer ${clientPublicKey} remove;
+    const command = `kubectl exec -n auth ${podName} -- wg set wg0 peer ${clientPublicKey} remove`;
     await executeCommand(command);
   } catch (error) {
     console.error("Error in removePeerWithKubernetes:", error instanceof Error ? error.message : error);
@@ -102,11 +89,7 @@ const removePeerWithKubernetes = async (
 
 const addPeer = async (clientPublicKey: string, assignedIP: string): Promise<void> => {
   try {
-    if (!clientPublicKey || !assignedIP) {
-      throw new Error("Invalid input provided to addPeer");
-    }
-
-    const command = wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32;
+    const command = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command);
   } catch (error) {
     console.error("Error in addPeer:", error instanceof Error ? error.message : error);
@@ -133,15 +116,9 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
       assignedIP,
     };
 
-    let randomPort
-
     if (isKubernetes) {
       const randomIndex = await getRandomIndex();
       const podName = await getPodName(randomIndex);
-
-      randomPort = "51820" + randomIndex;
-
-      console.log(podName);
 
       await addPeerWithKubernetes(clientPublicKey, assignedIP, podName);
 
@@ -149,7 +126,6 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
         ...response,
         podName,
         randomIndex,
-        randomPort,
       };
     } else {
       await addPeer(clientPublicKey, assignedIP);
@@ -160,10 +136,8 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
 
     res.status(200).json(response);
   } catch (error) {
-    if (error instanceof Error) {
-      res.status(500).json({ error: error.message });
-      console.error("Add Peer Error:", error);
-    }
+    res.status(500).json({ error: error instanceof Error ? error.message : "An error occurred" });
+    console.error("Add Peer Error:", error);
   }
 });
 
@@ -181,7 +155,8 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
 
       await removePeerWithKubernetes(clientPublicKey, podName);
     } else {
-      await executeCommand(wg set wg0 peer ${clientPublicKey} remove);
+      const command = `wg set wg0 peer ${clientPublicKey} remove`;
+      await executeCommand(command);
     }
 
     const success = poolManager.removePeer(clientPublicKey);
@@ -192,13 +167,11 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
       res.status(404).json({ error: "Peer not found" });
     }
   } catch (error) {
-    if (error instanceof Error) {
-      res.status(500).json({ error: error.message });
-      console.error("Remove Peer Error:", error);
-    }
+    res.status(500).json({ error: error instanceof Error ? error.message : "An error occurred" });
+    console.error("Remove Peer Error:", error);
   }
 });
 
-app.listen(4000, async () => {
+app.listen(4000, () => {
   console.log("Server is running on http://0.0.0.0:4000");
 });
