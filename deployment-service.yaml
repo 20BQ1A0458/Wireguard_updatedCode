@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: node-wireguard
 spec:
-  replicas: 2 # Adjust as needed
+  replicas: 1
   selector:
     matchLabels:
       app: node-wireguard
@@ -13,37 +13,14 @@ spec:
         app: node-wireguard
     spec:
       serviceAccountName: jenkins  # Ensure the pod uses the 'jenkins' service account
-      initContainers:
-        - name: wireguard-setup
-          image: bhargavram458/node-wireguard:latest # Use your appropriate image
-          command:
-            - "/bin/bash"
-            - "-c"
-            - |
-              pod_name=$(hostname)  # Get pod hostname
-              # Extract the pod index from the pod name (assumes pod name is like 'node-wireguard-<index>')
-              pod_index=${pod_name##*-}  # Remove everything up to the last '-'
-              # Set port and IP based on pod index
-              port=$((51820 + pod_index))  # WireGuard port offset by pod index
-              # Generate WireGuard private and public keys
-              wg genkey | tee /etc/wireguard/private.key | wg pubkey > /etc/wireguard/public.key
-              # Generate WireGuard configuration dynamically
-              echo "[Interface]" > /etc/wireguard/wg0.conf
-              echo "PrivateKey=$(cat /etc/wireguard/private.key)" >> /etc/wireguard/wg0.conf
-              echo "Address=10.8.0.$((pod_index+2))/24" >> /etc/wireguard/wg0.conf
-              echo "ListenPort=$port" >> /etc/wireguard/wg0.conf
-              # Bring up WireGuard interface (this may not be necessary in all cases)
-              wg-quick up /etc/wireguard/wg0.conf
-          volumeMounts:
-            - name: wireguard-config
-              mountPath: /etc/wireguard
+      hostNetwork: true            # Enable host network access for WireGuard
       containers:
         - name: node-wireguard
-          image: bhargavram458/node-wireguard:latest # Use your appropriate image
+          image: bhargavram458/node-wireguard:latest
           ports:
-            - containerPort: 4000 # Node.js app
+            - containerPort: 4000   # Node.js app
               protocol: TCP
-            - containerPort: 51820 # WireGuard
+            - containerPort: 51820  # WireGuard UDP port
               protocol: UDP
           env:
             - name: NODE_ENV
@@ -51,14 +28,33 @@ spec:
           securityContext:
             capabilities:
               add:
-                - NET_ADMIN
+                - NET_ADMIN  # Required for WireGuard operations
+      initContainers:
+        - name: wireguard-setup
+          image: bhargavram458/node-wireguard:latest
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+                pod_name=$(hostname)
+                pod_index=${pod_name##*-}
+                port=$((51820 + pod_index))
+                wg genkey | tee /etc/wireguard/private.key | wg pubkey > /etc/wireguard/public.key
+                echo "[Interface]" > /etc/wireguard/wg0.conf
+                echo "PrivateKey=$(cat /etc/wireguard/private.key)" >> /etc/wireguard/wg0.conf
+                echo "Address=10.8.0.$((pod_index+2))/24" >> /etc/wireguard/wg0.conf
+                echo "ListenPort=$port" >> /etc/wireguard/wg0.conf
+                wg-quick up /etc/wireguard/wg0.conf
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN  # Required for WireGuard setup
           volumeMounts:
             - name: wireguard-config
-              mountPath: /etc/wireguard
-              readOnly: true
+              mountPath: /etc/wireguard  # Mount WireGuard config into the container
       volumes:
         - name: wireguard-config
-          emptyDir: {}  # Use an emptyDir volume to share data between initContainer and main container
+          emptyDir: {}  # Empty directory for storing WireGuard config files
 
 ---
 apiVersion: v1
