@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: node-wireguard
 spec:
-  replicas: 1
+  replicas: 2 # Adjust as needed
   selector:
     matchLabels:
       app: node-wireguard
@@ -13,9 +13,33 @@ spec:
         app: node-wireguard
     spec:
       serviceAccountName: jenkins  # Ensure the pod uses the 'jenkins' service account
+      initContainers:
+        - name: wireguard-setup
+          image: bhargavram458/node-wireguard:latest # Use your appropriate image
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              pod_name=$(hostname)  # Get pod hostname
+              # Extract the pod index from the pod name (assumes pod name is like 'node-wireguard-<index>')
+              pod_index=${pod_name##*-}  # Remove everything up to the last '-'
+              # Set port and IP based on pod index
+              port=$((51820 + pod_index))  # WireGuard port offset by pod index
+              # Generate WireGuard private and public keys
+              wg genkey | tee /etc/wireguard/private.key | wg pubkey > /etc/wireguard/public.key
+              # Generate WireGuard configuration dynamically
+              echo "[Interface]" > /etc/wireguard/wg0.conf
+              echo "PrivateKey=$(cat /etc/wireguard/private.key)" >> /etc/wireguard/wg0.conf
+              echo "Address=10.8.0.$((pod_index+2))/24" >> /etc/wireguard/wg0.conf
+              echo "ListenPort=$port" >> /etc/wireguard/wg0.conf
+              # Bring up WireGuard interface (this may not be necessary in all cases)
+              wg-quick up /etc/wireguard/wg0.conf
+          volumeMounts:
+            - name: wireguard-config
+              mountPath: /etc/wireguard
       containers:
         - name: node-wireguard
-          image: bhargavram458/node-wireguard:latest
+          image: bhargavram458/node-wireguard:latest # Use your appropriate image
           ports:
             - containerPort: 4000 # Node.js app
               protocol: TCP
@@ -28,6 +52,13 @@ spec:
             capabilities:
               add:
                 - NET_ADMIN
+          volumeMounts:
+            - name: wireguard-config
+              mountPath: /etc/wireguard
+              readOnly: true
+      volumes:
+        - name: wireguard-config
+          emptyDir: {}  # Use an emptyDir volume to share data between initContainer and main container
 
 ---
 apiVersion: v1
@@ -64,5 +95,3 @@ spec:
       protocol: UDP
       port: 51820
       targetPort: 51820
-
-
