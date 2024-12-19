@@ -100,6 +100,20 @@ const removePeerWithKubernetes = async (
   }
 };
 
+const addPeer = async (clientPublicKey: string, assignedIP: string): Promise<void> => {
+  try {
+    if (!clientPublicKey || !assignedIP) {
+      throw new Error("Invalid input provided to addPeer");
+    }
+
+    const command = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
+    await executeCommand(command);
+  } catch (error) {
+    console.error("Error in addPeer:", error instanceof Error ? error.message : error);
+    throw error;
+  }
+};
+
 app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
   const { clientPublicKey } = req.body;
 
