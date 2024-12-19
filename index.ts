@@ -267,3 +267,6 @@ app.listen(4000, async () => {
     console.error("Error during WireGuard setup:", error instanceof Error ? error.message : error);
   }
 });
+
+
+
