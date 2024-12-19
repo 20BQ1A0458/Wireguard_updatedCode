@@ -39,7 +39,7 @@ spec:
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
               # Get pod index from environment variable or pod name
-              POD_INDEX=$((${POD_INDEX:-0} + 51820))  # Dynamic port generation (51820 + podIndex)
+              POD_INDEX=$((${POD_NAME##*-} + 51820))  # Dynamic port generation (51820 + podIndex)
               # Save the keys and configuration
               echo $PRIVATE_KEY > /etc/wireguard/privatekey
               echo $PUBLIC_KEY > /etc/wireguard/publickey
