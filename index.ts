@@ -29,16 +29,18 @@ const executeCommand = (command: string): Promise<string> =>
 
 const getRandomIndex = async (): Promise<number> => {
   try {
-    const indexOutput = await executeCommand(
-      "kubectl get pods -n auth -o jsonpath='{.items[*].metadata.name}' | grep -o 'wireguard-[^ ]*' | wc -l"
+    const output = await executeCommand(
+      "kubectl get pods -n auth -o jsonpath='{.items[*].metadata.name}'"
     );
-    const index = parseInt(indexOutput, 10);
 
-    if (isNaN(index) || index <= 0) {
-      throw new Error("Invalid index value");
+    // Parse pod names that match `node-wireguard`
+    const podNames = output.split(" ").filter((name) => name.startsWith("node-wireguard"));
+
+    if (podNames.length === 0) {
+      throw new Error("No WireGuard pods found with the prefix 'node-wireguard'");
     }
 
-    const randomIndex = Math.floor(Math.random() * index);
+    const randomIndex = Math.floor(Math.random() * podNames.length);
     return randomIndex;
   } catch (error) {
     console.error(
@@ -49,24 +51,32 @@ const getRandomIndex = async (): Promise<number> => {
   }
 };
 
-const getRandomPort = (index: number): number => {
-  return 51820 + index;
+const getPodName = async (index: number): Promise<string> => {
+  const output = await executeCommand(
+    "kubectl get pods -n auth -o jsonpath='{.items[*].metadata.name}'"
+  );
+
+  const podNames = output.split(" ").filter((name) => name.startsWith("node-wireguard"));
+
+  if (index < 0 || index >= podNames.length) {
+    throw new Error("Index out of range for WireGuard pods");
+  }
+
+  return podNames[index];
 };
 
 const addPeerWithKubernetes = async (
   clientPublicKey: string,
   assignedIP: string,
-  index: number,
-  port: number
+  podName: string
 ): Promise<void> => {
   try {
-    if (!clientPublicKey || !assignedIP || index < 0) {
+    if (!clientPublicKey || !assignedIP || !podName) {
       throw new Error("Invalid input provided to addPeerWithKubernetes");
     }
 
-    const command = `kubectl exec -n auth wireguard-${index} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
+    const command = `kubectl exec -n auth ${podName} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command);
-    await executeCommand("wg-quick save wg0");
   } catch (error) {
     console.error("Error in addPeerWithKubernetes:", error instanceof Error ? error.message : error);
     throw error;
@@ -75,69 +85,20 @@ const addPeerWithKubernetes = async (
 
 const removePeerWithKubernetes = async (
   clientPublicKey: string,
-  index: number
+  podName: string
 ): Promise<void> => {
   try {
-    if (!clientPublicKey || index < 0) {
+    if (!clientPublicKey || !podName) {
       throw new Error("Invalid input provided to removePeerWithKubernetes");
     }
 
-    const command = `kubectl exec -n auth wireguard-${index} -- wg set wg0 peer ${clientPublicKey} remove`;
+    const command = `kubectl exec -n auth ${podName} -- wg set wg0 peer ${clientPublicKey} remove`;
     await executeCommand(command);
-    await executeCommand("wg-quick save wg0");
   } catch (error) {
     console.error("Error in removePeerWithKubernetes:", error instanceof Error ? error.message : error);
     throw error;
   }
 };
-
-const generateKeys = async (): Promise<{
-  privateKey: string;
-  publicKey: string;
-}> => {
-  const privateKey = await executeCommand("wg genkey");
-  const publicKey = await executeCommand(`echo ${privateKey} | wg pubkey`);
-  return { privateKey, publicKey };
-};
-
-const saveKeys = async (
-  privateKey: string,
-  publicKey: string
-): Promise<void> => {
-  await fs.writeFile(PRIVATE_KEY_PATH, privateKey, { mode: 0o600 });
-  await fs.writeFile(PUBLIC_KEY_PATH, publicKey, { mode: 0o600 });
-};
-
-const createConfigFile = async (privateKey: string): Promise<void> => {
-  const configContent = `[Interface]
-PrivateKey = ${privateKey}
-Address = 10.8.0.1/24
-ListenPort = 51820
-SaveConfig = true
-PostUp = ufw route allow in on wg0 out on eth+
-PostUp = iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE
-PreDown = ufw route delete allow in on wg0 out on eth+
-PreDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
-`;
-  await fs.writeFile(CONFIG_PATH, configContent, { mode: 0o600 });
-};
-
-const setupWireGuardInterface = async (): Promise<void> => {
-  await executeCommand("wg-quick up wg0");
-};
-
-const addPeer = async (
-  clientPublicKey: string,
-  assignedIP: string
-): Promise<void> => {
-  const command = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
-  await executeCommand(command);
-  await executeCommand("wg-quick save wg0");
-};
-
-app.get("/", (_req: Request, res: Response) => {
-  res.status(200).send("Welcome to the WireGuard Server!");
-});
 
 app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
   const { clientPublicKey } = req.body;
@@ -160,14 +121,13 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
 
     if (isKubernetes) {
       const randomIndex = await getRandomIndex();
-      const randomPort = getRandomPort(randomIndex);
+      const podName = await getPodName(randomIndex);
 
-      await addPeerWithKubernetes(clientPublicKey, assignedIP, randomIndex, randomPort);
+      await addPeerWithKubernetes(clientPublicKey, assignedIP, podName);
 
       response = {
         ...response,
-        randomIndex,
-        randomPort,
+        podName,
       };
     } else {
       await addPeer(clientPublicKey, assignedIP);
@@ -195,7 +155,9 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
   try {
     if (isKubernetes) {
       const randomIndex = await getRandomIndex();
-      await removePeerWithKubernetes(clientPublicKey, randomIndex);
+      const podName = await getPodName(randomIndex);
+
+      await removePeerWithKubernetes(clientPublicKey, podName);
     } else {
       await executeCommand(`wg set wg0 peer ${clientPublicKey} remove`);
     }
@@ -216,18 +178,5 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
 });
 
 app.listen(4000, async () => {
-  try {
-    console.log("Server is running on http://0.0.0.0:4000");
-    if (!isKubernetes) {
-      const { privateKey, publicKey } = await generateKeys();
-      await saveKeys(privateKey, publicKey);
-      await createConfigFile(privateKey);
-      await setupWireGuardInterface();
-      console.log("WireGuard interface is up and running.");
-    }
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("Initialization error:", error.message);
-    }
-  }
+  console.log("Server is running on http://0.0.0.0:4000");
 });
