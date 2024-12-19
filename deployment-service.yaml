@@ -23,8 +23,6 @@ spec:
               protocol: TCP
             - containerPort: 51820  # WireGuard UDP port
               protocol: UDP
-            - containerPort: 51821  # WireGuard additional UDP port (if needed)
-              protocol: UDP
           env:
             - name: NODE_ENV
               value: production
