@@ -1,15 +1,10 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: auth  # Create the 'auth' namespace if it doesn't already exist
----
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: node-wireguard
   namespace: auth
 spec:
-  serviceName: "node-wireguard"  # Required field for StatefulSet
+  serviceName: "node-wireguard"
   replicas: 2
   selector:
     matchLabels:
@@ -19,8 +14,8 @@ spec:
       labels:
         app: node-wireguard
     spec:
-      serviceAccountName: jenkins  # Ensure the pod uses the 'jenkins' service account
-      hostNetwork: true  # Enable host network access for WireGuard
+      serviceAccountName: jenkins
+      hostNetwork: true
       initContainers:
         - name: wireguard-setup
           image: ubuntu:latest
@@ -28,46 +23,57 @@ spec:
             - /bin/bash
             - -c
             - |
-                apt-get update && apt-get install -y \
-                  wireguard \
-                  wireguard-tools \
-                  iproute2 \
-                  iptables \
-                  iputils-ping \
-                  curl \
-                  && apt-get clean && rm -rf /var/lib/apt/lists/*
+              apt-get update && apt-get install -y \
+                wireguard \
+                wireguard-tools \
+                iproute2 \
+                iptables \
+                iputils-ping \
+                curl \
+                && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-                # Generate WireGuard private and public keys
-                PRIVATE_KEY=$(wg genkey)
-                PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
+              # Generate WireGuard private and public keys
+              PRIVATE_KEY=$(wg genkey)
+              PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
 
-                # Use the pod's hostname as POD_NAME
-                POD_NAME=$(hostname)
-                echo "POD_NAME=$POD_NAME"
-                
-                # Extract pod index directly from pod name (expecting 'node-wireguard-0' or 'node-wireguard-1')
-                POD_INDEX=$(echo $POD_NAME | sed -E 's/.*-(.*)/\1/')
-                echo "Extracted POD_INDEX=$POD_INDEX"
+              # Use the pod's hostname as POD_NAME
+              POD_NAME=$(hostname)
+              echo "POD_NAME=$POD_NAME"
+              
+              # Extract pod index directly from pod name (expecting 'node-wireguard-0' or 'node-wireguard-1')
+              POD_INDEX=$(echo $POD_NAME | sed -E 's/.*-(.*)/\1/')
+              echo "Extracted POD_INDEX=$POD_INDEX"
 
-                # Calculate ListenPort dynamically based on the pod index (start at 51820)
-                LISTEN_PORT=$((51820 + ${POD_INDEX}))
-                echo "Calculated LISTEN_PORT=$LISTEN_PORT"
+              # Calculate ListenPort dynamically based on the pod index (51820 for pod 0, 51821 for pod 1)
+              LISTEN_PORT=$((51820 + ${POD_INDEX}))
+              echo "Calculated LISTEN_PORT=$LISTEN_PORT"
 
-                # Save keys and configuration to /etc/wireguard
-                echo $PRIVATE_KEY > /etc/wireguard/privatekey
-                echo $PUBLIC_KEY > /etc/wireguard/publickey
-                echo "[Interface]" > /etc/wireguard/wg0.conf
-                echo "PrivateKey=$(cat /etc/wireguard/privatekey)" >> /etc/wireguard/wg0.conf
-                echo "Address=10.8.0.1/24" >> /etc/wireguard/wg0.conf
+              # Save keys and configuration to /etc/wireguard
+              echo $PRIVATE_KEY > /etc/wireguard/privatekey
+              echo $PUBLIC_KEY > /etc/wireguard/publickey
+
+              # Write the WireGuard configuration file
+              echo "[Interface]" > /etc/wireguard/wg0.conf
+              echo "PrivateKey=$(cat /etc/wireguard/privatekey)" >> /etc/wireguard/wg0.conf
+              echo "Address=10.8.0.1/24" >> /etc/wireguard/wg0.conf
+              
+              # Conditionally set ListenPort if it’s missing or empty
+              current_listen_port=$(grep 'ListenPort=' /etc/wireguard/wg0.conf)
+              if [[ -z "$current_listen_port" ]]; then
                 echo "ListenPort=$LISTEN_PORT" >> /etc/wireguard/wg0.conf
-                cat /etc/wireguard/wg0.conf
+                echo "ListenPort was missing. Set to $LISTEN_PORT"
+              else
+                echo "ListenPort already set to $current_listen_port"
+              fi
 
-                # Bring up the WireGuard interface
-                if ! wg show wg0 > /dev/null 2>&1; then
-                  wg-quick up wg0
-                else
-                  echo "WireGuard interface wg0 is already up."
-                fi
+              cat /etc/wireguard/wg0.conf
+
+              # Bring up the WireGuard interface
+              if ! wg show wg0 > /dev/null 2>&1; then
+                wg-quick up wg0
+              else
+                echo "WireGuard interface wg0 is already up."
+              fi
           securityContext:
             privileged: true
             capabilities:
@@ -76,6 +82,7 @@ spec:
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
+
       containers:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
@@ -104,47 +111,3 @@ spec:
       volumes:
         - name: wireguard-config
           emptyDir: {}  # Temporary volume for storing WireGuard config files
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: node-wireguard-tcp
-  namespace: auth
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # Ensure NLB is used
-    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Make it internet-facing
-spec:
-  type: LoadBalancer
-  selector:
-    app: node-wireguard
-  ports:
-    - name: tcp-traffic
-      protocol: TCP
-      port: 4000
-      targetPort: 4000
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: node-wireguard-udp
-  namespace: auth
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-internal: "false"
-spec:
-  type: LoadBalancer
-  selector:
-    app: node-wireguard
-  ports:
-    - name: udp-traffic-51820
-      protocol: UDP
-      port: 51820
-      targetPort: 51820
-    - name: udp-traffic-51821
-      protocol: UDP
-      port: 51821
-      targetPort: 51821
-
-
-
-
