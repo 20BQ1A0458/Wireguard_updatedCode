@@ -67,15 +67,15 @@ spec:
   selector:
     app: node-wireguard
   ports:
-    - name: udp-traffic
+    - name: udp-traffic-51820
       protocol: UDP
       port: 51820
       targetPort: 51820
-    - name: udp-traffic
+    - name: udp-traffic-51821
       protocol: UDP
       port: 51821
       targetPort: 51821
-    - name: udp-traffic
+    - name: udp-traffic-51822
       protocol: UDP
       port: 51822
       targetPort: 51822
