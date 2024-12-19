@@ -9,8 +9,8 @@ const app = express();
 app.use(express.json());
 
 // WireGuard Configuration Paths
-const PRIVATE_KEY_PATH = "/etc/wireguard/private.key";
-const PUBLIC_KEY_PATH = "/etc/wireguard/public.key";
+const PRIVATE_KEY_PATH = "/etc/wireguard/privatekey.key";
+const PUBLIC_KEY_PATH = "/etc/wireguard/publickey.key";
 const CONFIG_PATH = "/etc/wireguard/wg0.conf";
 
 // IP Pool Manager Instance
