@@ -41,11 +41,11 @@ spec:
               PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
 
               # Extract pod index from pod name (last part of the name)
-              POD_INDEX=$(echo $POD_NAME | sed -E 's/.*-([a-z0-9]+)$/\1/')
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
               echo "Extracted POD_INDEX=$POD_INDEX"
 
               # Calculate ListenPort dynamically based on the pod index (start at 51820)
-              LISTEN_PORT=$((51820 + $(echo $POD_INDEX | tr -cd '0-9')))
+              LISTEN_PORT=$((51820 + ${POD_INDEX}))
               echo "Calculated LISTEN_PORT=$LISTEN_PORT"
 
               # Save keys and configuration to /etc/wireguard
@@ -57,7 +57,11 @@ spec:
               echo "ListenPort=$LISTEN_PORT" >> /etc/wireguard/wg0.conf
 
               # Bring up the WireGuard interface
-              wg-quick up wg0
+              if ! wg show wg0 > /dev/null 2>&1; then
+                wg-quick up wg0
+              else
+                echo "WireGuard interface wg0 is already up."
+              fi
           securityContext:
             privileged: true
             capabilities:
