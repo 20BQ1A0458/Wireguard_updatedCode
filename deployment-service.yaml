@@ -55,11 +55,11 @@ spec:
 
               # Write the WireGuard configuration file
               cat <<EOF > /etc/wireguard/wg0.conf
-[Interface]
-PrivateKey=$(cat /etc/wireguard/privatekey)
-Address=10.8.0.$((1 + POD_INDEX))/24
-ListenPort=$LISTEN_PORT
-EOF
+              [Interface]
+              PrivateKey=$(cat /etc/wireguard/privatekey)
+              Address=10.8.0.$((1 + POD_INDEX))/24
+              ListenPort=$LISTEN_PORT
+              EOF
 
               echo "Generated wg0.conf:"
               cat /etc/wireguard/wg0.conf
