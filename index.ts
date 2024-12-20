@@ -3,8 +3,6 @@ import { exec } from "child_process";
 import { promises as fs } from "fs";
 import { IPPoolManager, createIPPoolManager } from "./ipPoolManager";
 
-const isKubernetes = true;
-
 const app = express();
 app.use(express.json());
 
@@ -27,6 +25,7 @@ const executeCommand = (command: string): Promise<string> =>
     });
   });
 
+// Get Pod Name by Index
 const getPodNameByIndex = async (index: number): Promise<string> => {
   const output = await executeCommand(
     "kubectl get pods -n auth -o jsonpath='{.items[*].metadata.name}'"
@@ -41,6 +40,7 @@ const getPodNameByIndex = async (index: number): Promise<string> => {
   return podNames[index];
 };
 
+// Add Peer to Kubernetes Pod
 const addPeerWithKubernetes = async (
   clientPublicKey: string,
   assignedIP: string,
@@ -55,6 +55,7 @@ const addPeerWithKubernetes = async (
   }
 };
 
+// Add Peer to Local WireGuard Instance
 const addPeer = async (clientPublicKey: string, assignedIP: string): Promise<void> => {
   try {
     const command = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
@@ -65,6 +66,7 @@ const addPeer = async (clientPublicKey: string, assignedIP: string): Promise<voi
   }
 };
 
+// Endpoint for adding a new peer
 app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
   const { clientPublicKey } = req.body;
 
@@ -79,36 +81,28 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
       return res.status(500).json({ error: "No available IPs" });
     }
 
-    let response: any = {
-      message: "Peer added successfully",
-      assignedIP,
-    };
+    const randomIndex = Math.floor(Math.random() * 2); // Get a random pod index (assuming 2 pods)
+    const podName = await getPodNameByIndex(randomIndex);
 
-    if (isKubernetes) {
-      const randomIndex = Math.floor(Math.random() * 2); // Adjust this based on the number of replicas
-      const podName = await getPodNameByIndex(randomIndex);
-
-      await addPeerWithKubernetes(clientPublicKey, assignedIP, podName);
-
-      response = {
-        ...response,
-        podName,
-        randomIndex,
-      };
-    } else {
-      await addPeer(clientPublicKey, assignedIP);
-    }
+    // Add peer to the Kubernetes pod
+    await addPeerWithKubernetes(clientPublicKey, assignedIP, podName);
 
     const serverPublicKey = await fs.readFile(PUBLIC_KEY_PATH, "utf-8");
-    response.serverPublicKey = serverPublicKey.trim();
 
-    res.status(200).json(response);
+    res.status(200).json({
+      message: "Peer added successfully",
+      assignedIP,
+      podName,
+      randomIndex,
+      serverPublicKey: serverPublicKey.trim(),
+    });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "An error occurred" });
     console.error("Add Peer Error:", error);
   }
 });
 
+// Start the Express server
 app.listen(4000, () => {
   console.log("Server is running on http://0.0.0.0:4000");
 });
