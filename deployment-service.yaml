@@ -32,28 +32,22 @@ spec:
                 curl \
                 ufw \
                 && apt-get clean && rm -rf /var/lib/apt/lists/*
-
               # Generate WireGuard private and public keys
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
-
               # Use the pod's hostname as POD_NAME
               POD_NAME=$(hostname)
               echo "POD_NAME=$POD_NAME"
-
               # Extract pod index directly from pod name (expecting 'node-wireguard-0' or 'node-wireguard-1')
               POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
               echo "Extracted POD_INDEX=$POD_INDEX"
-
               # Calculate ListenPort dynamically based on the pod index (51820 for pod 0, 51821 for pod 1)
               LISTEN_PORT=$((51820 + POD_INDEX))
               echo "Calculated LISTEN_PORT=$LISTEN_PORT"
-
               # Save keys and configuration to /etc/wireguard
               mkdir -p /etc/wireguard
               echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
               echo "$PUBLIC_KEY" > /etc/wireguard/publickey
-
               # Write the WireGuard configuration file
               cat <<EOF > /etc/wireguard/wg0.conf
               [Interface]
@@ -61,17 +55,13 @@ spec:
               Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
               EOF
-
               echo "Generated wg0.conf:"
               cat /etc/wireguard/wg0.conf
-
               # Apply firewall and NAT rules for internet access
               ufw route allow in on wg0 out on eth+  # Allow traffic from wg0 to eth+
               iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE  # NAT rule for internet access
-
               # Bring up the WireGuard interface
               wg-quick up wg0 || echo "WireGuard setup failed."
-
           securityContext:
             privileged: true
             capabilities:
@@ -80,7 +70,6 @@ spec:
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
-
       containers:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
@@ -105,13 +94,10 @@ spec:
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
-
       volumes:
         - name: wireguard-config
           emptyDir: {}
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -129,9 +115,7 @@ spec:
       protocol: TCP
       port: 4000
       targetPort: 4000
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
