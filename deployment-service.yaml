@@ -41,7 +41,7 @@ spec:
               echo "POD_NAME=$POD_NAME"
 
               # Extract pod index directly from pod name (expecting 'node-wireguard-0' or 'node-wireguard-1')
-              POD_INDEX=$(echo "$POD_NAME" | sed -E 's/.*-(.*)/\1/')
+              POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
               echo "Extracted POD_INDEX=$POD_INDEX"
 
               # Calculate ListenPort dynamically based on the pod index (51820 for pod 0, 51821 for pod 1)
