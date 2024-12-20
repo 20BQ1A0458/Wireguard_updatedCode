@@ -30,6 +30,7 @@ spec:
                 iptables \
                 iputils-ping \
                 curl \
+                ufw \
                 && apt-get clean && rm -rf /var/lib/apt/lists/*
 
               # Generate WireGuard private and public keys
@@ -64,8 +65,13 @@ spec:
               echo "Generated wg0.conf:"
               cat /etc/wireguard/wg0.conf
 
+              # Apply firewall and NAT rules for internet access
+              ufw route allow in on wg0 out on eth+  # Allow traffic from wg0 to eth+
+              iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE  # NAT rule for internet access
+
               # Bring up the WireGuard interface
               wg-quick up wg0 || echo "WireGuard setup failed."
+
           securityContext:
             privileged: true
             capabilities:
