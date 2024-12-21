@@ -38,6 +38,9 @@ spec:
               POD_NAME=$(hostname)
               POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
               LISTEN_PORT=$((51820 + POD_INDEX))
+              PEER_IP="10.8.0.$((1 + POD_INDEX))"
+              PEER_PUBLIC_KEY=$(cat /etc/wireguard/peer-publickey.txt) # Here, you would inject the other peer's public key
+
               # Save keys and configuration to /etc/wireguard
               mkdir -p /etc/wireguard
               echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
@@ -56,6 +59,11 @@ spec:
               PostDown = ufw route delete allow in on eth+ out on enX0
               PostDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
               PreDown = iptables -D INPUT -i wg0 -j ACCEPT
+
+              [Peer]
+              PublicKey=$PEER_PUBLIC_KEY
+              AllowedIPs=10.8.0.2/32  # Peer IP
+              Endpoint=10.8.0.$((1 + POD_INDEX)):51820
               EOF
               # Enable IP forwarding
               echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -95,9 +103,6 @@ spec:
       volumes:
         - name: wireguard-config
           emptyDir: {}
-
-
-
 ---
 apiVersion: v1
 kind: Service
