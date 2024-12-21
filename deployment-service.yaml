@@ -15,7 +15,6 @@ spec:
         app: node-wireguard
     spec:
       serviceAccountName: jenkins
-      hostNetwork: true
       initContainers:
         - name: wireguard-setup
           image: ubuntu:latest
@@ -139,3 +138,7 @@ spec:
       protocol: UDP
       port: 51821
       targetPort: 51821
+
+
+
+
