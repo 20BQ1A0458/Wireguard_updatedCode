@@ -87,8 +87,7 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
     // Add peer to the Kubernetes pod
     await addPeerWithKubernetes(clientPublicKey, assignedIP, podName);
 
-    const serverPublicKey = await fs.readFile(PUBLIC_KEY_PATH, "utf-8");
-
+    const serverPublicKey = await executeCommand( `kubectl exec -n auth ${podName} -- cat /etc/wireguard/publickey`);
     res.status(200).json({
       message: "Peer added successfully",
       assignedIP,
