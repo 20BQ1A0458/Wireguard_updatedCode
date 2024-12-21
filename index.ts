@@ -33,7 +33,7 @@ const getPodNameByIndex = async (index: number): Promise<string> => {
 
   const podNames = output.split(" ").filter((name) => name.startsWith("node-wireguard"));
 
-  if (index <= 0 || index >= podNames.length) {
+  if (index < 0 || index >= podNames.length) {
     throw new Error("Index out of range for WireGuard pods");
   }
 
