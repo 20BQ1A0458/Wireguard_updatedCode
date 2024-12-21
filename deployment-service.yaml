@@ -65,11 +65,6 @@ spec:
               PostDown = ufw route delete allow in on eth+ out on enX0
               PostDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
               PreDown = iptables -D INPUT -i wg0 -j ACCEPT
-
-              [Peer]
-              PublicKey=$PEER_PUBLIC_KEY
-              AllowedIPs=10.8.0.$((2 + POD_INDEX))/32  # Peer IP
-              Endpoint=10.8.0.$((1 + POD_INDEX)):51820
               EOF
               
               # Enable IP forwarding for WireGuard
