@@ -22,6 +22,7 @@ spec:
             - /bin/bash
             - -c
             - |
+              # Install necessary packages
               apt-get update && apt-get install -y \
                 wireguard \
                 wireguard-tools \
@@ -29,52 +30,55 @@ spec:
                 iptables \
                 iputils-ping \
                 curl \
-                ufw \
                 && apt-get clean && rm -rf /var/lib/apt/lists/*
-              
+
               # Generate WireGuard private and public keys
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
-              
-              # Extract the pod's index number from the pod name (e.g., node-wireguard-0 or node-wireguard-1)
+
+              # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
               POD_NAME=$(hostname)
               POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
               LISTEN_PORT=$((51820 + POD_INDEX))
               PEER_IP="10.8.0.$((1 + POD_INDEX))"
-              
-              # Get the peer's public key (you will need to inject this dynamically)
-              # For now, we'll use a placeholder public key for the other peer
-              PEER_PUBLIC_KEY=$(cat /etc/wireguard/peer-publickey.txt)  # You can inject this dynamically
 
-              # Save the private and public keys
+              # Get the peer's public key (inject this dynamically, for now using a placeholder)
+              PEER_PUBLIC_KEY=$(cat /etc/wireguard/peer-publickey.txt)  # Replace with dynamic injection if needed
+
+              # Save the private and public keys to the container
               mkdir -p /etc/wireguard
               echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
               echo "$PUBLIC_KEY" > /etc/wireguard/publickey
 
-              # Write the WireGuard configuration file for the current node
+              # Write the WireGuard configuration
               cat <<EOF > /etc/wireguard/wg0.conf
               [Interface]
               PrivateKey=$PRIVATE_KEY
               Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
-              SaveConfig = true
-              PreUp = ufw allow in on wg0
-              PreUp = iptables -A INPUT -i wg0 -j ACCEPT
-              PostUp = ufw route allow in on wg0 out on eth+
-              PostUp = iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE
-              PostDown = ufw route delete allow in on eth+ out on enX0
-              PostDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
-              PreDown = iptables -D INPUT -i wg0 -j ACCEPT
+              SaveConfig=true
+
+              [Peer]
+              PublicKey=$PEER_PUBLIC_KEY
+              Endpoint=$PEER_IP:51820
+              AllowedIPs=10.8.0.0/24
+              PersistentKeepalive=25
               EOF
-              
-              # Enable IP forwarding for WireGuard
-              echo 1 > /proc/sys/net/ipv4/ip_forward
-              sysctl -p
+
+              # Enable IP forwarding inside the container for WireGuard to work
+              echo "1" > /proc/sys/net/ipv4/ip_forward
+              sysctl -p || true  # Ignore errors from sysctl due to container isolation
+
+              # Set up iptables for NAT and forwarding (No UFW, using iptables directly)
+              iptables -A FORWARD -i wg0 -j ACCEPT
+              iptables -A FORWARD -o wg0 -j ACCEPT
+              iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+              iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
 
               # Bring up the WireGuard interface
               wg-quick up wg0 || echo "WireGuard setup failed."
           securityContext:
-            privileged: true
+            privileged: true  # Required to run iptables and WireGuard commands
             capabilities:
               add:
                 - NET_ADMIN
@@ -99,13 +103,14 @@ spec:
           securityContext:
             capabilities:
               add:
-                - NET_ADMIN
+                - NET_ADMIN  # Allow to manage networking inside the container
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
       volumes:
         - name: wireguard-config
           emptyDir: {}
+
 
 ---
 apiVersion: v1
