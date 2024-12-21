@@ -38,10 +38,10 @@ spec:
               # Use the pod's hostname as POD_NAME
               POD_NAME=$(hostname)
               echo "POD_NAME=$POD_NAME"
-              # Extract pod index directly from pod name (expecting 'node-wireguard-0' or 'node-wireguard-1')
+              # Extract pod index directly from pod name
               POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
               echo "Extracted POD_INDEX=$POD_INDEX"
-              # Calculate ListenPort dynamically based on the pod index (51820 for pod 0, 51821 for pod 1)
+              # Calculate ListenPort dynamically based on the pod index
               LISTEN_PORT=$((51820 + POD_INDEX))
               echo "Calculated LISTEN_PORT=$LISTEN_PORT"
               # Save keys and configuration to /etc/wireguard
@@ -51,15 +51,17 @@ spec:
               # Write the WireGuard configuration file
               cat <<EOF > /etc/wireguard/wg0.conf
               [Interface]
-              PrivateKey=$(cat /etc/wireguard/privatekey)
+              PrivateKey=$PRIVATE_KEY
               Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
+              PostUp = iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+              PostDown = iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
               EOF
               echo "Generated wg0.conf:"
               cat /etc/wireguard/wg0.conf
-              # Apply firewall and NAT rules for internet access
-              ufw route allow in on wg0 out on eth+  # Allow traffic from wg0 to eth+
-              iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE  # NAT rule for internet access
+              # Enable IP forwarding
+              echo 1 > /proc/sys/net/ipv4/ip_forward
+              sysctl -p
               # Bring up the WireGuard interface
               wg-quick up wg0 || echo "WireGuard setup failed."
           securityContext:
