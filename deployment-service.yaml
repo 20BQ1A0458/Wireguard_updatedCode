@@ -31,41 +31,57 @@ spec:
                 curl \
                 ufw \
                 && apt-get clean && rm -rf /var/lib/apt/lists/*
+              
               # Generate WireGuard private and public keys
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
+              
               # Use the pod's hostname as POD_NAME
               POD_NAME=$(hostname)
               echo "POD_NAME=$POD_NAME"
+              
               # Extract pod index directly from pod name
               POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
               echo "Extracted POD_INDEX=$POD_INDEX"
+              
               # Calculate ListenPort dynamically based on the pod index
               LISTEN_PORT=$((51820 + POD_INDEX))
               echo "Calculated LISTEN_PORT=$LISTEN_PORT"
+              
               # Save keys and configuration to /etc/wireguard
               mkdir -p /etc/wireguard
               echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
               echo "$PUBLIC_KEY" > /etc/wireguard/publickey
-              # Write the WireGuard configuration file
+              
+              # Write the WireGuard configuration file with PreUp and PostUp/PostDown commands
               cat <<EOF > /etc/wireguard/wg0.conf
               [Interface]
               PrivateKey=$PRIVATE_KEY
               Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
               SaveConfig = true
+              PreUp = ufw allow in on wg0
+              PreUp = iptables -A INPUT -i wg0 -j ACCEPT
               PostUp = ufw route allow in on wg0 out on eth+
               PostUp = iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE
               PostDown = ufw route delete allow in on eth+ out on enX0
               PostDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
+              PreDown = iptables -D INPUT -i wg0 -j ACCEPT
               EOF
               echo "Generated wg0.conf:"
               cat /etc/wireguard/wg0.conf
+              
               # Enable IP forwarding
               echo 1 > /proc/sys/net/ipv4/ip_forward
               sysctl -p
-              # Bring up the WireGuard interface
-              wg-quick up wg0 || echo "WireGuard setup failed."
+              
+              # Bring up the WireGuard interface and log the outcome
+              echo "Starting WireGuard interface..."
+              wg-quick up wg0 -v > /var/log/wireguard.log 2>&1 || echo "WireGuard setup failed. Check /var/log/wireguard.log for details."
+              
+              # Log the status of the WireGuard interface (include handshake info)
+              wg show >> /var/log/wireguard.log
+              echo "WireGuard setup completed" >> /var/log/wireguard.log
           securityContext:
             privileged: true
             capabilities:
@@ -74,6 +90,8 @@ spec:
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
+            - name: wireguard-logs
+              mountPath: /var/log
       containers:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
@@ -98,9 +116,16 @@ spec:
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
+            - name: wireguard-logs
+              mountPath: /var/log
       volumes:
         - name: wireguard-config
           emptyDir: {}
+        - name: wireguard-logs
+          emptyDir: {}
+
+
+
 ---
 apiVersion: v1
 kind: Service
