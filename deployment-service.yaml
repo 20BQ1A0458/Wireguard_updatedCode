@@ -54,7 +54,9 @@ spec:
               Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
               SaveConfig = true
-              PostUp = iptables -t nat -A POSTROUTING -o eth+ -j MASQUERADE
+              PostUp = ufw route allow in on wg0 out on eth+
+              PostUp = iptables -t nat -I POSTROUTING -o eth+ -j MASQUERADE
+              PostDown = ufw route delete allow in on eth+ out on enX0
               PostDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
               EOF
               echo "Generated wg0.conf:"
@@ -139,7 +141,5 @@ spec:
       protocol: UDP
       port: 51821
       targetPort: 51821
-
-
 
 
