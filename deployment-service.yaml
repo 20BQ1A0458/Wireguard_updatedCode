@@ -57,12 +57,6 @@ spec:
               Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
               SaveConfig=true
-
-              [Peer]
-              PublicKey=$PEER_PUBLIC_KEY
-              Endpoint=$PEER_IP:51820
-              AllowedIPs=10.8.0.0/24
-              PersistentKeepalive=25
               EOF
 
               # Enable IP forwarding inside the container for WireGuard to work
