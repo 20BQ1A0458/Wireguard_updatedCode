@@ -53,8 +53,9 @@ spec:
               PrivateKey=$PRIVATE_KEY
               Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
-              PostUp = iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-              PostDown = iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+              SaveConfig = true
+              PostUp = iptables -t nat -A POSTROUTING -o eth+ -j MASQUERADE
+              PostDown = iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
               EOF
               echo "Generated wg0.conf:"
               cat /etc/wireguard/wg0.conf
