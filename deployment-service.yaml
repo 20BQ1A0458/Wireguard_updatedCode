@@ -1,150 +1,67 @@
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: node-wireguard
-  namespace: auth
-spec:
-  serviceName: "node-wireguard"
-  replicas: 2
-  selector:
-    matchLabels:
-      app: node-wireguard
-  template:
-    metadata:
-      labels:
-        app: node-wireguard
-    spec:
-      serviceAccountName: jenkins
-      initContainers:
-        - name: wireguard-setup
-          image: ubuntu:latest
-          command:
-            - /bin/bash
-            - -c
-            - |
-              # Install necessary packages
-              apt-get update && apt-get install -y \
-                wireguard \
-                wireguard-tools \
-                iproute2 \
-                iptables \
-                iputils-ping \
-                curl \
-                && apt-get clean && rm -rf /var/lib/apt/lists/*
+initContainers:
+  - name: wireguard-setup
+    image: ubuntu:latest
+    command:
+      - /bin/bash
+      - -c
+      - |
+        # Install necessary packages
+        apt-get update && apt-get install -y \
+          wireguard \
+          wireguard-tools \
+          iproute2 \
+          iptables \
+          iputils-ping \
+          curl \
+          && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-              # Generate WireGuard private and public keys
-              PRIVATE_KEY=$(wg genkey)
-              PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
+        # Generate WireGuard private and public keys
+        PRIVATE_KEY=$(wg genkey)
+        PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
-              # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
-              POD_NAME=$(hostname)
-              POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
-              LISTEN_PORT=$((51820 + POD_INDEX))
-              PEER_IP="10.8.0.$((1 + POD_INDEX))"
+        # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
+        POD_NAME=$(hostname)
+        POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
+        LISTEN_PORT=$((51820 + POD_INDEX))  # Assign unique port per pod (51820 for first, 51821 for second, etc.)
+        PEER_IP="10.8.0.$((POD_INDEX + 1))"  # Assign dynamic IP (10.8.0.1 for first pod, 10.8.0.2 for second, etc.)
 
-              # Get the peer's public key (inject this dynamically, for now using a placeholder)
-              PEER_PUBLIC_KEY=$(cat /etc/wireguard/peer-publickey.txt)  # Replace with dynamic injection if needed
+        # Generate WireGuard configuration dynamically
+        mkdir -p /etc/wireguard
 
-              # Save the private and public keys to the container
-              mkdir -p /etc/wireguard
-              echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
-              echo "$PUBLIC_KEY" > /etc/wireguard/publickey
+        # Write the WireGuard configuration
+        cat <<EOF > /etc/wireguard/wg0.conf
+        [Interface]
+        PrivateKey=$PRIVATE_KEY
+        Address=10.8.0.$((POD_INDEX + 1))/24
+        ListenPort=$LISTEN_PORT
+        SaveConfig=true
 
-              # Write the WireGuard configuration
-              cat <<EOF > /etc/wireguard/wg0.conf
-              [Interface]
-              PrivateKey=$PRIVATE_KEY
-              Address=10.8.0.$((1 + POD_INDEX))/24
-              ListenPort=$LISTEN_PORT
-              SaveConfig=true
-              EOF
+        [Peer]
+        PublicKey=$PEER_PUBLIC_KEY  # Replace this with dynamically provided peer public key if needed
+        AllowedIPs=0.0.0.0/0
+        EOF
 
-              # Enable IP forwarding inside the container for WireGuard to work
-              echo "1" > /proc/sys/net/ipv4/ip_forward
-              sysctl -p || true  # Ignore errors from sysctl due to container isolation
+        # Save the private and public keys to the container
+        echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
+        echo "$PUBLIC_KEY" > /etc/wireguard/publickey
 
-              # Set up iptables for NAT and forwarding (No UFW, using iptables directly)
-              iptables -A FORWARD -i wg0 -j ACCEPT
-              iptables -A FORWARD -o wg0 -j ACCEPT
-              iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-              iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
+        # Enable IP forwarding inside the container for WireGuard to work
+        echo "1" > /proc/sys/net/ipv4/ip_forward
+        sysctl -p || true  # Ignore errors from sysctl due to container isolation
 
-              # Bring up the WireGuard interface
-              wg-quick up wg0 || echo "WireGuard setup failed."
-          securityContext:
-            privileged: true  # Required to run iptables and WireGuard commands
-            capabilities:
-              add:
-                - NET_ADMIN
-          volumeMounts:
-            - name: wireguard-config
-              mountPath: /etc/wireguard
-      containers:
-        - name: node-wireguard
-          image: bhargavram458/node-wireguard:latest
-          ports:
-            - containerPort: 4000   # Node.js app
-              protocol: TCP
-            - containerPort: 51820  # WireGuard UDP port
-              protocol: UDP
-          env:
-            - name: NODE_ENV
-              value: production
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-          securityContext:
-            capabilities:
-              add:
-                - NET_ADMIN  # Allow to manage networking inside the container
-          volumeMounts:
-            - name: wireguard-config
-              mountPath: /etc/wireguard
-      volumes:
-        - name: wireguard-config
-          emptyDir: {}
+        # Set up iptables for NAT and forwarding (No UFW, using iptables directly)
+        iptables -A FORWARD -i wg0 -j ACCEPT
+        iptables -A FORWARD -o wg0 -j ACCEPT
+        iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+        iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
 
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: node-wireguard-tcp
-  namespace: auth
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-internal: "false"
-spec:
-  type: LoadBalancer
-  selector:
-    app: node-wireguard
-  ports:
-    - name: tcp-traffic
-      protocol: TCP
-      port: 4000
-      targetPort: 4000
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: node-wireguard-udp
-  namespace: auth
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-internal: "false"
-spec:
-  type: LoadBalancer
-  selector:
-    app: node-wireguard
-  ports:
-    - name: udp-traffic-51820
-      protocol: UDP
-      port: 51820
-      targetPort: 51820
-    - name: udp-traffic-51821
-      protocol: UDP
-      port: 51821
-      targetPort: 51821
-
-
+        # Bring up the WireGuard interface
+        wg-quick up wg0 || echo "WireGuard setup failed."
+    securityContext:
+      privileged: true  # Required to run iptables and WireGuard commands
+      capabilities:
+        add:
+          - NET_ADMIN
+    volumeMounts:
+      - name: wireguard-config
+        mountPath: /etc/wireguard
