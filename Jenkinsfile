@@ -27,7 +27,7 @@ pipeline {
 
                         // Use buildx and avoid Groovy string interpolation for secrets
                         sh '''
-                            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                             docker buildx create --use
                             docker buildx build -t ${dockerImageWithRepo} --push .
                         '''
@@ -86,4 +86,3 @@ pipeline {
         }
     }
 }
-
