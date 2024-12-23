@@ -112,33 +112,62 @@
 // });
 
 
-import dgram, { RemoteInfo } from 'dgram';
 
-// Create the UDP server
-const server = dgram.createSocket('udp4');
 
-// Handling incoming messages
-server.on('message', (msg: Buffer, rinfo: RemoteInfo) => {
-  console.log(`Received message: ${msg.toString()} from ${rinfo.address}:${rinfo.port}`);
-});
 
-// Server listening on port 51820 (NodePort)
-server.on('listening', () => {
-  const address = server.address();
-  console.log(`Server listening on ${address.address}:${address.port}`);
-});
 
-// Handling errors
-server.on('error', (err) => {
-  console.error(`Server error: ${err.stack}`);
-  server.close();
-});
 
-// Bind the server to the port 51820 (the NodePort)
-const PORT = 51820;
-const HOST = '0.0.0.0'; // Listen on all available interfaces
 
-server.bind(PORT, HOST, () => {
-  console.log(`Server bound to ${HOST}:${PORT}`);
-});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ------------------------------------------------------Socket Code ---------------------------Working Fine--------------------------------------------
+
+
+
+
+
+
+
+
+// import dgram, { RemoteInfo } from 'dgram';
+
+// // Create the UDP server
+// const server = dgram.createSocket('udp4');
+
+// // Handling incoming messages
+// server.on('message', (msg: Buffer, rinfo: RemoteInfo) => {
+//   console.log(`Received message: ${msg.toString()} from ${rinfo.address}:${rinfo.port}`);
+// });
+
+// // Server listening on port 51820 (NodePort)
+// server.on('listening', () => {
+//   const address = server.address();
+//   console.log(`Server listening on ${address.address}:${address.port}`);
+// });
+
+// // Handling errors
+// server.on('error', (err) => {
+//   console.error(`Server error: ${err.stack}`);
+//   server.close();
+// });
+
+// // Bind the server to the port 51820 (the NodePort)
+// const PORT = 51820;
+// const HOST = '0.0.0.0'; // Listen on all available interfaces
+
+// server.bind(PORT, HOST, () => {
+//   console.log(`Server bound to ${HOST}:${PORT}`);
+// });
 
