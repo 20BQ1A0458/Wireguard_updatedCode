@@ -20,13 +20,17 @@ pipeline {
             steps {
                 script {
                     echo 'Building and pushing Docker image to Docker Hub...'
+
+                    // Using withCredentials to securely handle credentials
                     withCredentials([usernamePassword(credentialsId: 'docker-credentials-id', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         def dockerImageWithRepo = "${DOCKER_USERNAME.toLowerCase()}/${env.DOCKER_IMAGE.toLowerCase()}:${env.DOCKER_TAG.toLowerCase()}"
-                        sh """
+
+                        // Use buildx and avoid Groovy string interpolation for secrets
+                        sh '''
                             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-                            docker build -t ${dockerImageWithRepo} .
-                            docker push ${dockerImageWithRepo}
-                        """
+                            docker buildx create --use
+                            docker buildx build -t ${dockerImageWithRepo} --push .
+                        '''
                     }
                 }
             }
