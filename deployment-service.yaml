@@ -149,3 +149,44 @@
 
 
 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-udp-server
+spec:
+  replicas: 1  # Adjust the number of replicas as needed
+  selector:
+    matchLabels:
+      app: node-udp-server
+  template:
+    metadata:
+      labels:
+        app: node-udp-server
+    spec:
+      containers:
+      - name: node-udp-server 
+        image: bhargavram458/node-wireguard:latest  # Replace with your Docker image name
+        ports:
+        - containerPort: 51820
+          protocol: UDP
+        env:
+        - name: NODE_ENV
+          value: "production"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-udp-server-service
+spec:
+  selector:
+    app: node-udp-server
+  ports:
+    - protocol: UDP
+      port: 51820    # Port inside the cluster
+      targetPort: 51820  # Port exposed by the container
+      nodePort: 30001   # NodePort to expose the service externally
+  type: NodePort
+
+
+
