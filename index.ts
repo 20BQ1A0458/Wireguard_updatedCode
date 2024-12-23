@@ -49,6 +49,7 @@ const addPeerWithKubernetes = async (
   try {
     const command = `kubectl exec -n auth ${podName} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command);
+    const command = `kubectl exec -n auth ${podName} -- wg-quick save wg0`
   } catch (error) {
     console.error("Error in addPeerWithKubernetes:", error instanceof Error ? error.message : error);
     throw error;
