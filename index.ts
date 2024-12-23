@@ -112,12 +112,12 @@
 // });
 
 
-const dgram = require('dgram');
+import dgram, { RemoteInfo } from 'dgram';
+
 const server = dgram.createSocket('udp4');
 
 // Handling incoming messages
-server.on('message', (msg, rinfo) => {
-  // TypeScript will infer types, but we can add explicit annotations if needed.
+server.on('message', (msg: Buffer, rinfo: RemoteInfo) => {
   console.log(`Received message: ${msg} from ${rinfo.address}:${rinfo.port}`);
 });
 
@@ -129,4 +129,3 @@ server.on('listening', () => {
 
 // Bind the server to the port 51820 (the NodePort)
 server.bind(51820);
-
