@@ -187,6 +187,7 @@ spec:
       targetPort: 51820  # Port exposed by the container
       nodePort: 30001   # NodePort to expose the service externally
   type: NodePort
+  externalTrafficPolicy: Local
 
 
 
