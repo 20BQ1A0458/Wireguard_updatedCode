@@ -14,6 +14,9 @@ const CONFIG_PATH = "/etc/wireguard/wg0.conf";
 // IP Pool Manager Instance
 const poolManager = createIPPoolManager("10.8.0.0/24");
 
+// Fixed WireGuard port
+const WG_PORT = 51820;  // Fixed WireGuard port for all pods
+
 // Utility to execute shell commands
 const executeCommand = (command: string): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -84,8 +87,8 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
       return res.status(500).json({ error: "No available IPs" });
     }
 
-    const randomIndex = Math.floor(Math.random() * 2); // Get a random pod index (assuming 2 pods)
-    const podName = await getPodNameByIndex(randomIndex);
+    const podIndex = 0; // Only using pod 0, remove random index generation
+    const podName = await getPodNameByIndex(podIndex);
 
     // Add peer to the Kubernetes pod
     await addPeerWithKubernetes(clientPublicKey, assignedIP, podName);
@@ -95,7 +98,6 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
       message: "Peer added successfully",
       assignedIP,
       podName,
-      randomIndex,
       serverPublicKey: serverPublicKey.trim(),
     });
   } catch (error) {
