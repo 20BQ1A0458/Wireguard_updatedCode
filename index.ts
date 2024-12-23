@@ -117,6 +117,7 @@ const server = dgram.createSocket('udp4');
 
 // Handling incoming messages
 server.on('message', (msg, rinfo) => {
+  // TypeScript will infer types, but we can add explicit annotations if needed.
   console.log(`Received message: ${msg} from ${rinfo.address}:${rinfo.port}`);
 });
 
