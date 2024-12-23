@@ -20,16 +20,13 @@ pipeline {
             steps {
                 script {
                     echo 'Building and pushing Docker image to Docker Hub...'
-
-                    withCredentials([usernamePassword(credentialsId: 'docker-credentials-id', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         def dockerImageWithRepo = "${DOCKER_USERNAME.toLowerCase()}/${env.DOCKER_IMAGE.toLowerCase()}:${env.DOCKER_TAG.toLowerCase()}"
-
-                        // Use the regular docker build command
-                        sh '''
+                        sh """
                             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
                             docker build -t ${dockerImageWithRepo} .
                             docker push ${dockerImageWithRepo}
-                        '''
+                        """
                     }
                 }
             }
@@ -48,8 +45,8 @@ pipeline {
                     ]
                 ]) {
                     echo 'Deploying application to Kubernetes...'
-                    sh "kubectl apply -f deployment-service.yaml"
-                    sh "kubectl rollout restart statefulset/node-wireguard -n auth"
+                    sh "kubectl apply -f deployment-service.yml"
+                    sh "kubectl rollout restart deployment/node-wireguard -n auth"
                 }
             }
         }
