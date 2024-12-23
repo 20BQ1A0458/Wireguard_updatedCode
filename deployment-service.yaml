@@ -70,17 +70,11 @@ spec:
 
               # Dynamically save configuration
               wg-quick save wg0 || echo "Failed to save WireGuard configuration."
-
-              # Save for use by main container
-              cp -r /etc/wireguard /wireguard-data/
           securityContext:
             privileged: true
             capabilities:
               add:
                 - NET_ADMIN
-          volumeMounts:
-            - name: wireguard-data
-              mountPath: /wireguard-data
       containers:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
@@ -103,10 +97,10 @@ spec:
               add:
                 - NET_ADMIN
           volumeMounts:
-            - name: wireguard-data
+            - name: wireguard-config
               mountPath: /etc/wireguard
       volumes:
-        - name: wireguard-data
+        - name: wireguard-config
           emptyDir: {}
 
 ---
