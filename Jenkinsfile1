@@ -46,7 +46,7 @@ pipeline {
                         sh "export KUBECONFIG=$(pwd)/kubeconfig"
 
                         // Apply deployment and service YAMLs in the 'wireguard' namespace
-                        sh "kubectl apply -f deployment-service.yaml -n wireguard"
+                        sh "kubectl apply -f deployment-service1.yaml -n wireguard"
 
                         // Restart StatefulSet (if applicable)
                         sh "kubectl rollout restart statefulset/node-wireguard -n wireguard"
