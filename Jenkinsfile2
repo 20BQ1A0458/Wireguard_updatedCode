@@ -1,0 +1,90 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'node-wireguard'
+        DOCKER_TAG = 'latest'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                script {
+                    echo "Checking out code from branch: ${env.BRANCH_NAME}"
+                    checkout scm
+                }
+            }
+        }
+
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    echo 'Building and pushing Docker image to Docker Hub...'
+                    withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        def dockerImageWithRepo = "${DOCKER_USERNAME.toLowerCase()}/${env.DOCKER_IMAGE.toLowerCase()}:${env.DOCKER_TAG.toLowerCase()}"
+                        sh """
+                            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                            docker build -t ${dockerImageWithRepo} .
+                            docker push ${dockerImageWithRepo}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo 'Deploying application to Kubernetes...'
+
+                    // Fetch kubeconfig from secret text
+                    withCredentials([string(credentialsId: 'k8s-secret-cluster', variable: 'KUBECONFIG_CONTENT')]) {
+                        // Write kubeconfig to a temporary file
+                        writeFile file: 'kubeconfig', text: env.KUBECONFIG_CONTENT
+
+                        // Use the kubeconfig for this session
+                        sh "export KUBECONFIG=$(pwd)/kubeconfig"
+
+                        // Apply deployment and service YAMLs in the 'wireguard' namespace
+                        sh "kubectl apply -f deployment-service.yaml -n wireguard"
+
+                        // Restart StatefulSet (if applicable)
+                        sh "kubectl rollout restart statefulset/node-wireguard -n wireguard"
+                    }
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo 'Verifying deployment...'
+
+                    // Fetch kubeconfig from secret text
+                    withCredentials([string(credentialsId: 'k8s-secret-cluster', variable: 'KUBECONFIG_CONTENT')]) {
+                        // Write kubeconfig to a temporary file
+                        writeFile file: 'kubeconfig', text: env.KUBECONFIG_CONTENT
+
+                        // Use the kubeconfig for this session
+                        sh "export KUBECONFIG=$(pwd)/kubeconfig"
+
+                        // Verify deployment status in 'wireguard' namespace
+                        sh "kubectl get all -n wireguard"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline execution completed!'
+        }
+        success {
+            echo 'Docker image built and pushed successfully to Docker Hub!'
+        }
+        failure {
+            echo 'An error occurred during the pipeline execution.'
+        }
+    }
+}
