@@ -39,14 +39,12 @@ pipeline {
 
                     // Fetch kubeconfig from secret file
                     withCredentials([file(credentialsId: 'k8s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                        // Use the kubeconfig for this session
-                        sh "export KUBECONFIG=${KUBECONFIG_FILE}"
-
-                        // Apply deployment and service YAMLs in the 'wireguard' namespace
-                        sh "kubectl apply -f deployment-service1.yaml -n wireguard"
-
-                        // Restart StatefulSet (if applicable)
-                        sh "kubectl rollout restart statefulset/node-wireguard -n wireguard"
+                        // Set KUBECONFIG environment variable to the file path directly
+                        sh """
+                            export KUBECONFIG=${KUBECONFIG_FILE}
+                            kubectl apply -f deployment-service1.yaml -n wireguard
+                            kubectl rollout restart statefulset/node-wireguard -n wireguard
+                        """
                     }
                 }
             }
@@ -59,11 +57,11 @@ pipeline {
 
                     // Fetch kubeconfig from secret file
                     withCredentials([file(credentialsId: 'k8s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                        // Use the kubeconfig for this session
-                        sh "export KUBECONFIG=${KUBECONFIG_FILE}"
-
-                        // Verify deployment status in 'wireguard' namespace
-                        sh "kubectl get all -n wireguard"
+                        // Set KUBECONFIG environment variable to the file path directly
+                        sh """
+                            export KUBECONFIG=${KUBECONFIG_FILE}
+                            kubectl get all -n wireguard
+                        """
                     }
                 }
             }
