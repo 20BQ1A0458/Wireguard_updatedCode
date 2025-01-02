@@ -41,6 +41,7 @@ pipeline {
                     withCredentials([file(credentialsId: 'k8s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
                         // Set KUBECONFIG environment variable to the file path directly
                         sh """
+                            ls -l
                             export KUBECONFIG=${WORKSPACE}/${KUBECONFIG_FILE}
                             kubectl apply -f deployment-service1.yaml -n wireguard
                             kubectl rollout restart statefulset/node-wireguard -n wireguard
@@ -59,6 +60,7 @@ pipeline {
                     withCredentials([file(credentialsId: 'k8s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
                         // Set KUBECONFIG environment variable to the file path directly
                         sh """
+                            ls -l
                             export KUBECONFIG=${WORKSPACE}/${KUBECONFIG_FILE}
                             kubectl get all -n wireguard
                         """
