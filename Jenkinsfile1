@@ -37,13 +37,10 @@ pipeline {
                 script {
                     echo 'Deploying application to Kubernetes...'
 
-                    // Fetch kubeconfig from secret text
-                    withCredentials([string(credentialsId: 'k8s-secret-cluster', variable: 'KUBECONFIG_CONTENT')]) {
-                        // Write kubeconfig to a temporary file
-                        writeFile file: 'kubeconfig', text: env.KUBECONFIG_CONTENT
-
+                    // Fetch kubeconfig from secret file
+                    withCredentials([file(credentialsId: 'k8s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
                         // Use the kubeconfig for this session
-                        sh "export KUBECONFIG=${(pwd)}/kubeconfig"
+                        sh "export KUBECONFIG=${KUBECONFIG_FILE}"
 
                         // Apply deployment and service YAMLs in the 'wireguard' namespace
                         sh "kubectl apply -f deployment-service1.yaml -n wireguard"
@@ -60,13 +57,10 @@ pipeline {
                 script {
                     echo 'Verifying deployment...'
 
-                    // Fetch kubeconfig from secret text
-                    withCredentials([string(credentialsId: 'k8s-secret-cluster', variable: 'KUBECONFIG_CONTENT')]) {
-                        // Write kubeconfig to a temporary file
-                        writeFile file: 'kubeconfig', text: env.KUBECONFIG_CONTENT
-
+                    // Fetch kubeconfig from secret file
+                    withCredentials([file(credentialsId: 'k8s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
                         // Use the kubeconfig for this session
-                        sh "export KUBECONFIG=${(pwd)}/kubeconfig"
+                        sh "export KUBECONFIG=${KUBECONFIG_FILE}"
 
                         // Verify deployment status in 'wireguard' namespace
                         sh "kubectl get all -n wireguard"
@@ -88,6 +82,3 @@ pipeline {
         }
     }
 }
-
-
-
