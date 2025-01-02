@@ -43,7 +43,7 @@ pipeline {
                         writeFile file: 'kubeconfig', text: env.KUBECONFIG_CONTENT
 
                         // Use the kubeconfig for this session
-                        sh "export KUBECONFIG=$(pwd)/kubeconfig"
+                        sh "export KUBECONFIG=${(pwd)}/kubeconfig"
 
                         // Apply deployment and service YAMLs in the 'wireguard' namespace
                         sh "kubectl apply -f deployment-service1.yaml -n wireguard"
@@ -66,7 +66,7 @@ pipeline {
                         writeFile file: 'kubeconfig', text: env.KUBECONFIG_CONTENT
 
                         // Use the kubeconfig for this session
-                        sh "export KUBECONFIG=$(pwd)/kubeconfig"
+                        sh "export KUBECONFIG=${(pwd)}/kubeconfig"
 
                         // Verify deployment status in 'wireguard' namespace
                         sh "kubectl get all -n wireguard"
