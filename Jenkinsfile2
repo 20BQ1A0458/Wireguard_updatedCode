@@ -41,7 +41,7 @@ pipeline {
                         contextName: '', 
                         credentialsId: 'k8-token', 
                         namespace: 'wireguard', 
-                        serverUrl: 'https://klb.qclairvoyance.com:6443'
+                        serverUrl: 'https://103.158.81.182:6443'
                     ]
                 ]) {
                     echo 'Deploying application to Kubernetes...'
