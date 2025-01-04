@@ -37,8 +37,8 @@ pipeline {
                 withKubeCredentials(kubectlCredentials: [
                     [
                         caCertificate: '', 
-                        clusterName: '', 
-                        contextName: '', 
+                        clusterName: 'kubernetes', 
+                        contextName: 'kubernetes-admin@kubernetes', 
                         credentialsId: 'k8-token', 
                         namespace: 'wireguard', 
                         serverUrl: 'https://103.158.81.182:6443'
@@ -56,11 +56,11 @@ pipeline {
                 withKubeCredentials(kubectlCredentials: [
                     [
                         caCertificate: '', 
-                        clusterName: '', 
-                        contextName: '', 
+                        clusterName: 'kubernetes', 
+                        contextName: 'kubernetes-admin@kubernetes', 
                         credentialsId: 'k8-token', 
                         namespace: 'wireguard', 
-                        serverUrl: 'https://klb.qclairvoyance.com:6443'
+                        serverUrl: 'https://103.158.81.182:6443'
                     ]
                 ]) {
                     echo 'Verifying deployment...'
