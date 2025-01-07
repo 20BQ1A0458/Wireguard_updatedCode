@@ -41,7 +41,7 @@ pipeline {
                         contextName: 'kubernetes-admin@kubernetes', 
                         credentialsId: 'k8-token', 
                         namespace: 'wireguard', 
-                        serverUrl: 'https://103.158.81.182:6443'
+                        serverUrl: ''
                     ]
                 ]) {
                     echo 'Deploying application to Kubernetes...'
@@ -60,7 +60,7 @@ pipeline {
                         contextName: 'kubernetes-admin@kubernetes', 
                         credentialsId: 'k8-token', 
                         namespace: 'wireguard', 
-                        serverUrl: 'https://103.158.81.182:6443'
+                        serverUrl: ''
                     ]
                 ]) {
                     echo 'Verifying deployment...'
