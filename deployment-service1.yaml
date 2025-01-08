@@ -44,6 +44,7 @@ spec:
                 && apt-get clean && rm -rf /var/lib/apt/lists/*
 
               # Generate WireGuard private and public keys
+              ip link delete wg0 || true
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
