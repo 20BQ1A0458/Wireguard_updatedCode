@@ -16,7 +16,15 @@ spec:
         app: node-wireguard
     spec:
       hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: None
+      dnsconfig:
+        nameservers:
+          - 8.8.8.8
+          - 1.1.1.1
+        searches:
+          - wireguard.svc.cluster.local
+          - svc.cluster.local
+          - cluster.local
       serviceAccountName: jenkins
       initContainers:
         - name: wireguard-setup
