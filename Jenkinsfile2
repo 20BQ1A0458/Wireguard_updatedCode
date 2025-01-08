@@ -24,7 +24,8 @@ pipeline {
                         def dockerImageWithRepo = "${DOCKER_USERNAME.toLowerCase()}/${env.DOCKER_IMAGE.toLowerCase()}:${env.DOCKER_TAG.toLowerCase()}"
                         sh """
                             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-                            docker build -t ${dockerImageWithRepo} .
+                            docker build --no-cache -t ${dockerImageWithRepo} .
+
                             docker push ${dockerImageWithRepo}
                         """
                     }
