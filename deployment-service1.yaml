@@ -49,6 +49,7 @@ spec:
               # Save the private and public keys to the container
               mkdir -p /etc/wireguard
               echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
+              echo "privatekey"
               echo "$PUBLIC_KEY" > /etc/wireguard/publickey
 
               # Write the WireGuard configuration
