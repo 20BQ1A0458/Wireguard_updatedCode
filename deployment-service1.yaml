@@ -79,7 +79,7 @@ spec:
               # Set up iptables for NAT and forwarding (No UFW, using iptables directly)
               iptables -A FORWARD -i wg0 -j ACCEPT
               iptables -A FORWARD -o wg0 -j ACCEPT
-              iptables -t nat -A POSTROUTING -o eth+ -j MASQUERADE
+              iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
               iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
 
               # Bring up the WireGuard interface
