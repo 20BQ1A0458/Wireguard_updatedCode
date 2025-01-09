@@ -15,12 +15,6 @@ spec:
       labels:
         app: node-wireguard
     spec:
-      env:
-        # Pod Name
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
       hostNetwork: true
       dnsPolicy:  None
       dnsConfig:
@@ -55,10 +49,12 @@ spec:
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
               # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
-              POD_NAME=$(POD_NAME)
-              POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
-              LISTEN_PORT=$((51820 + POD_INDEX))  # Dynamically set port 51820, 51821
-              PEER_IP="10.8.0.$((1 + POD_INDEX))"
+              # POD_NAME=$(POD_NAME)
+              # POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
+              # LISTEN_PORT=$((51820 + POD_INDEX))# Dynamically set port 51820, 51821
+              LISTEN_PORT=51820
+              # PEER_IP="10.8.0.$((1 + POD_INDEX))"
+              PEER_IP="10.8.0.1"
 
               # Get the peer's public key (inject this dynamically, for now using a placeholder)
               PEER_PUBLIC_KEY=$(cat /etc/wireguard/peer-publickey.txt)  # Replace with dynamic injection if needed
@@ -73,7 +69,7 @@ spec:
               cat <<EOF > /etc/wireguard/wg0.conf
               [Interface]
               PrivateKey=$PRIVATE_KEY
-              Address=10.8.0.$((1 + POD_INDEX))/24
+              Address=10.8.0.1/24
               ListenPort=$LISTEN_PORT
               SaveConfig=true
               EOF
@@ -105,8 +101,6 @@ spec:
             - containerPort: 4000   # Node.js app
               protocol: TCP
             - containerPort: 51820  # WireGuard UDP port for pod 0
-              protocol: UDP
-            - containerPort: 51821  # WireGuard UDP port for pod 1
               protocol: UDP
           env:
             - name: NODE_ENV
@@ -163,11 +157,6 @@ spec:
       port: 51820
       targetPort: 51820
       nodePort: 30002  # NodePort for pod 0
-    - name: udp-traffic-51821
-      protocol: UDP
-      port: 51821
-      targetPort: 51821
-      nodePort: 30003  # NodePort for pod 1
 
 
 
