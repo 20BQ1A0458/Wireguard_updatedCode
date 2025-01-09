@@ -28,7 +28,7 @@ const executeCommand = (command: string): Promise<string> =>
 // Get Pod Name by Index
 const getPodNameByIndex = async (index: number): Promise<string> => {
   const output = await executeCommand(
-    "kubectl get pods -n auth -o jsonpath='{.items[*].metadata.name}'"
+    "kubectl get pods -n wireguard -o jsonpath='{.items[*].metadata.name}'"
   );
 
   const podNames = output.split(" ").filter((name) => name.startsWith("node-wireguard"));
@@ -48,11 +48,11 @@ const addPeerWithKubernetes = async (
 ): Promise<void> => {
   try {
     // Add the peer to the WireGuard configuration in the Kubernetes pod
-    const command1 = `kubectl exec -n auth ${podName} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
+    const command1 = `kubectl exec -n wireguard ${podName} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command1);
 
     // Save the WireGuard configuration
-    const command2 = `kubectl exec -n auth ${podName} -- wg-quick save wg0`;
+    const command2 = `kubectl exec -n wireguard ${podName} -- wg-quick save wg0`;
     await executeCommand(command2);
   } catch (error) {
     console.error("Error in addPeerWithKubernetes:", error instanceof Error ? error.message : error);
@@ -97,7 +97,7 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
 
     // Retrieve the server's public key from the selected pod
     const serverPublicKey = await executeCommand(
-      `kubectl exec -n auth ${podName} -- cat /etc/wireguard/publickey`
+      `kubectl exec -n wireguard ${podName} -- cat /etc/wireguard/publickey`
     );
 
     // Respond with success
