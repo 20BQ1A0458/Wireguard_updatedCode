@@ -48,11 +48,11 @@ const addPeerWithKubernetes = async (
 ): Promise<void> => {
   try {
     // Add the peer to the WireGuard configuration in the Kubernetes pod
-    const command1 = `kubectl exec -n wireguard ${podName} -- wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
+    const command1 = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command1);
 
     // Save the WireGuard configuration
-    const command2 = `kubectl exec -n wireguard ${podName} -- wg-quick save wg0`;
+    const command2 = `wg-quick save wg0`;
     await executeCommand(command2);
   } catch (error) {
     console.error("Error in addPeerWithKubernetes:", error instanceof Error ? error.message : error);
@@ -97,7 +97,7 @@ app.post("/add-peer", async (req: Request, res: Response): Promise<any> => {
 
     // Retrieve the server's public key from the selected pod
     const serverPublicKey = await executeCommand(
-      `kubectl exec -n wireguard ${podName} -- cat /etc/wireguard/publickey`
+      `cat /etc/wireguard/publickey`
     );
 
     // Respond with success
