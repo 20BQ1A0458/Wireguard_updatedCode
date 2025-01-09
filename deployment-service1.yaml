@@ -15,6 +15,12 @@ spec:
       labels:
         app: node-wireguard
     spec:
+      env:
+        # Pod Name
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
       hostNetwork: true
       dnsPolicy:  None
       dnsConfig:
