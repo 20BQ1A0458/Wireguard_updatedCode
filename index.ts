@@ -159,7 +159,7 @@ function getPodName() {
 function getNodePort() {
   return executeCommand(
     //here we are hardcoding the service name, you can pass it as an argument
-    "kubectl get svc wireguard -o=jsonpath='{.spec.ports[0].nodePort}'"
+    "kubectl get svc node-wireguard-udp -o=jsonpath='{.spec.ports[0].nodePort}'"
   );
 }
 
