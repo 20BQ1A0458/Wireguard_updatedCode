@@ -71,7 +71,7 @@ const removePeerWithKubernetes = async (
 ): Promise<void> => {
   try {
     // Add the peer to the WireGuard configuration in the Kubernetes pod
-    const cmdRemovePeer = `kubectl exec ${podName} -- wg set wg0 peer ${clientPublicKey} remove`;
+    const cmdRemovePeer = `kubectl exec -n wireguard -- wg set wg0 peer ${clientPublicKey} remove`;
     await executeCommand(cmdRemovePeer);
 
     // Save the WireGuard configuration
