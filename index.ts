@@ -170,7 +170,7 @@ function getHostName() {
 function getExternalIP() {
   var nodeName = getHostName();
   return executeCommand(
-    `kubectl get node ${nodeName} -o jsonpath='{.status.addresses[?(@.type=="ExternalIP")].address}'`
+    `kubectl get node ${nodeName} -o jsonpath='{.metadata.annotations.external-ip}'`
   );
 }
 
