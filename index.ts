@@ -168,7 +168,8 @@ function getHostName() {
 }
 
 function getExternalIP() {
-  var nodeName = getHostName();
+  var nodeName = await getHostName();
+  console.log(nodeName)
   return executeCommand(
     `kubectl get node ${nodeName} -o jsonpath='{.metadata.annotations.external-ip}'`
   );
