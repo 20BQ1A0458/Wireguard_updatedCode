@@ -49,7 +49,7 @@ const addPeerWithKubernetes = async (
 ): Promise<void> => {
   try {
     // Add the peer to the WireGuard configuration in the Kubernetes pod
-    const command1 = `wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
+    const command1 = `kubectl exec -n wireguard ${podName} --wg set wg0 peer ${clientPublicKey} allowed-ips ${assignedIP}/32`;
     await executeCommand(command1);
 
     // Save the WireGuard configuration
@@ -159,7 +159,7 @@ function getPodName() {
 function getNodePort() {
   return executeCommand(
     //here we are hardcoding the service name, you can pass it as an argument
-    "kubectl get svc node-wireguard-udp -o=jsonpath='{.spec.ports[0].nodePort}'"
+    "kubectl get svc node-wireguard-udp -n wireguard -o=jsonpath='{.spec.ports[0].nodePort}'"
   );
 }
 
