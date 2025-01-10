@@ -167,7 +167,7 @@ function getHostName() {
   return executeCommand("hostname");
 }
 
-function getExternalIP() {
+async function getExternalIP() {
   var nodeName = await getHostName();
   console.log(nodeName)
   return executeCommand(
