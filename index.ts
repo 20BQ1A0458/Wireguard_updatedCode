@@ -156,11 +156,11 @@ function getPodName() {
   return executeCommand("echo $POD_NAME");
 }
 
-function getNodePort(serviceName: string) {
+function getNodePort() {
   return executeCommand(
     //here we are hardcoding the service name, you can pass it as an argument
-    //"kubectl get svc ${serviceName} -n wireguard -o=jsonpath='{.spec.ports[0].nodePort}'"
-     `kubectl get svc ${serviceName} -n wireguard -o=jsonpath='{.spec.ports[?(@.protocol=="UDP")].nodePort}'`
+    "kubectl get svc node-wireguard-udp -n wireguard -o=jsonpath='{.spec.ports[0].nodePort}'"
+    //`kubectl get svc ${serviceName} -n wireguard -o=jsonpath='{.spec.ports[?(@.protocol=="UDP")].nodePort}'`
   );
 }
 
