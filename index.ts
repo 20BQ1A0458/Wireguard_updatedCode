@@ -239,7 +239,9 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
   // Validate podName
   if (!podName) {
     return res.status(400).json({ error: "podName is required" });
-  }
+  }const serviceName = await executeCommand(
+    "kubectl get svc -n wireguard -o=jsonpath='{.items[?(@.spec.ports[0].protocol==\"UDP\")].metadata.name}'"
+  )
 
   try {
     // Add the peer to the selected Kubernetes pod
