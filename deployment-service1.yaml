@@ -49,7 +49,8 @@ spec:
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
               # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
-              POD_NAME=$(POD_NAME)
+              POD_NAME=$POD_NAME
+              echo $POD_NAME
               POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
               LISTEN_PORT=$((51820 + POD_INDEX))# Dynamically set port 51820, 51821
               #LISTEN_PORT=51820
