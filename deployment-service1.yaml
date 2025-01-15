@@ -162,12 +162,12 @@ spec:
       port: 51820
       targetPort: 51820
       nodePort: 30000  # NodePort for pod 0
-    - name: udp-traffic-51820
+    - name: udp-traffic-51821
       protocol: UDP
       port: 51821
       targetPort: 51821
       nodePort: 30001  # NodePort for pod 1
-    - name: udp-traffic-51820
+    - name: udp-traffic-51822
       protocol: UDP
       port: 51822
       targetPort: 51822
