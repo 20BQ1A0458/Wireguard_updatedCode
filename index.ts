@@ -156,11 +156,11 @@ function getPodName() {
   return executeCommand("echo $POD_NAME");
 }
 
-function getNodePort() {
-  const serviceName = executeCommand(
+async function getNodePort() {
+  const serviceName = await executeCommand(
     "kubectl get svc -n wireguard -o=jsonpath='{.items[?(@.spec.ports[0].protocol==\"UDP\")].metadata.name}'"
   )
-  return executeCommand(
+  return await executeCommand(
     //here we are hardcoding the service name, you can pass it as an argument
     `kubectl get svc  ${serviceName}  -n wireguard -o=jsonpath='{.spec.ports[0].nodePort}'`
     //`kubectl get svc ${serviceName} -n wireguard -o=jsonpath='{.spec.ports[?(@.protocol=="UDP")].nodePort}'`
@@ -239,10 +239,8 @@ app.post("/remove-peer", async (req: Request, res: Response): Promise<any> => {
   // Validate podName
   if (!podName) {
     return res.status(400).json({ error: "podName is required" });
-  }const serviceName = await executeCommand(
-    "kubectl get svc -n wireguard -o=jsonpath='{.items[?(@.spec.ports[0].protocol==\"UDP\")].metadata.name}'"
-  )
-
+  }
+  
   try {
     // Add the peer to the selected Kubernetes pod
     await removePeerWithKubernetes(req.body.clientPublicKey, req.body.podName);
