@@ -182,7 +182,7 @@ spec:
       protocol: UDP
       port: 51823
       targetPort: 51823
-      nodePort: 30004  # NodePort for pod 3
+      nodePort: 30005  # NodePort for pod 3
 
 
 
