@@ -113,7 +113,7 @@ spec:
             - name: POD_INDEX
               valueFrom:
                 fieldRef:
-                  fieldPath: metadata.labels['statefulset.kubernetes.io/pod-index']
+                  fieldPath: metadata.name
           securityContext:
             capabilities:
               add:
