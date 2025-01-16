@@ -1,4 +1,3 @@
-
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -44,7 +43,7 @@ spec:
                 && apt-get clean && rm -rf /var/lib/apt/lists/*
 
               # Generate WireGuard private and public keys
-              ip link delete wg0 || true
+              # ip link delete wg0 || true
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
@@ -70,7 +69,8 @@ spec:
               cat <<EOF > /etc/wireguard/wg0.conf
               [Interface]
               PrivateKey=$PRIVATE_KEY
-              Address=10.8.0.1/24
+              # Address=10.8.0.1/24
+              Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
               SaveConfig=true
               EOF
@@ -161,17 +161,17 @@ spec:
       protocol: UDP
       port: 51820
       targetPort: 51820
-      nodePort: 30000  # NodePort for pod 0
+      nodePort: 30002  # NodePort for pod 0
     - name: udp-traffic-51821
       protocol: UDP
       port: 51821
       targetPort: 51821
-      nodePort: 30001  # NodePort for pod 1
+      nodePort: 30003  # NodePort for pod 1
     - name: udp-traffic-51822
       protocol: UDP
       port: 51822
       targetPort: 51822
-      nodePort: 30002  # NodePort for pod 2
+      nodePort: 30004  # NodePort for pod 2
 
 
 
