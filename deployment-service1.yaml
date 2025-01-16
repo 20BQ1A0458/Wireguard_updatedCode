@@ -5,7 +5,7 @@ metadata:
   namespace: wireguard
 spec:
   serviceName: "node-wireguard"
-  replicas: 3  # Updated for 4 replicas
+  replicas: 3
   selector:
     matchLabels:
       app: node-wireguard
@@ -15,7 +15,7 @@ spec:
         app: node-wireguard
     spec:
       hostNetwork: true
-      dnsPolicy:  None
+      dnsPolicy: None
       dnsConfig:
         nameservers:
           - 8.8.8.8
@@ -28,6 +28,11 @@ spec:
       initContainers:
         - name: wireguard-setup
           image: ubuntu:latest
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           command:
             - /bin/bash
             - -c
@@ -47,39 +52,39 @@ spec:
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
-              mkdir -p /etc/wireguard
-              # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
-              # POD_NAME=${POD_NAME}
-              POD_NAME=$(kubectl get pod -n wireguard -l app=node-wireguard -o jsonpath='{.items[0].metadata.name}')
-              echo "$POD_NAME" > /etc/wireguard/podname
-              # POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
-              POD_INDEX=$(echo "$POD_NAME" | sed 's/[^0-9]*\([0-9]\+\).*/\1/')
-              LISTEN_PORT=$((51820 + POD_INDEX)) # Dynamically set port 51820, 51821, 51822
+              # Extract pod index from pod name (e.g., node-wireguard-0, node-wireguard-1)
+              if [[ -z "$POD_NAME" ]]; then
+                echo "Error: POD_NAME is not set"
+                exit 1
+              fi
+
+              POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
+              if [[ -z "$POD_INDEX" ]]; then
+                echo "Error: Failed to extract POD_INDEX from POD_NAME"
+                exit 1
+              fi
+
+              LISTEN_PORT=$((51820 + POD_INDEX))
               PEER_IP="10.8.0.$((1 + POD_INDEX))"
 
-              # Get the peer's public key (inject this dynamically, for now using a placeholder)
-              PEER_PUBLIC_KEY=$(cat /etc/wireguard/peer-publickey.txt)  # Replace with dynamic injection if needed
-
               # Save the private and public keys to the container
-              # mkdir -p /etc/wireguard
+              mkdir -p /etc/wireguard
               echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
-              echo "privatekey"
               echo "$PUBLIC_KEY" > /etc/wireguard/publickey
 
               # Write the WireGuard configuration
               cat <<EOF > /etc/wireguard/wg0.conf
               [Interface]
               PrivateKey=$PRIVATE_KEY
-              Address=10.8.0.$((1 + POD_INDEX))/24
+              Address=$PEER_IP/24
               ListenPort=$LISTEN_PORT
               SaveConfig=true
               EOF
 
-              # Enable IP forwarding inside the container for WireGuard to work
+              # Enable IP forwarding inside the container
               echo "1" > /proc/sys/net/ipv4/ip_forward
-              sysctl -p || true  # Ignore errors from sysctl due to container isolation
 
-              # Set up iptables for NAT and forwarding (No UFW, using iptables directly)
+              # Set up iptables for NAT and forwarding
               iptables -A FORWARD -i wg0 -j ACCEPT
               iptables -A FORWARD -o wg0 -j ACCEPT
               iptables -t nat -A POSTROUTING -o ens+ -j MASQUERADE
@@ -88,7 +93,7 @@ spec:
               # Bring up the WireGuard interface
               wg-quick up wg0 || echo "WireGuard setup failed."
           securityContext:
-            privileged: true  # Required to run iptables and WireGuard commands
+            privileged: true
             capabilities:
               add:
                 - NET_ADMIN
@@ -99,13 +104,13 @@ spec:
         - name: node-wireguard
           image: bhargavram458/node-wireguard:latest
           ports:
-            - containerPort: 4000   # Node.js app
+            - containerPort: 4000
               protocol: TCP
-            - containerPort: 51820  # WireGuard UDP port for pod 0
+            - containerPort: 51820
               protocol: UDP
-            - containerPort: 51821  # WireGuard UDP port for pod 1
+            - containerPort: 51821
               protocol: UDP
-            - containerPort: 51822  # WireGuard UDP port for pod 2
+            - containerPort: 51822
               protocol: UDP
           env:
             - name: NODE_ENV
@@ -117,7 +122,7 @@ spec:
           securityContext:
             capabilities:
               add:
-                - NET_ADMIN  # Allow to manage networking inside the container
+                - NET_ADMIN
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
