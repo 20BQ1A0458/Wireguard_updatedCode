@@ -5,7 +5,7 @@ metadata:
   namespace: wireguard
 spec:
   serviceName: "node-wireguard"
-  replicas: 4  # Updated for 4 replicas
+  replicas: 3  # Updated for 4 replicas
   selector:
     matchLabels:
       app: node-wireguard
