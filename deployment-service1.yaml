@@ -50,6 +50,7 @@ spec:
               # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
               # POD_NAME=${POD_NAME}
               POD_NAME=$(kubectl get pod -n wireguard -l app=node-wireguard -o jsonpath='{.items[0].metadata.name}')
+              echo "$POD_NAME" > /etc/wireguard/podname
               # POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
               POD_INDEX=$(echo "$POD_NAME" | sed 's/[^0-9]*\([0-9]\+\).*/\1/')
               LISTEN_PORT=$((51820 + POD_INDEX)) # Dynamically set port 51820, 51821, 51822
