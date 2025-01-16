@@ -47,6 +47,7 @@ spec:
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
+              mkdir -p /etc/wireguard
               # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
               # POD_NAME=${POD_NAME}
               POD_NAME=$(kubectl get pod -n wireguard -l app=node-wireguard -o jsonpath='{.items[0].metadata.name}')
@@ -60,7 +61,7 @@ spec:
               PEER_PUBLIC_KEY=$(cat /etc/wireguard/peer-publickey.txt)  # Replace with dynamic injection if needed
 
               # Save the private and public keys to the container
-              mkdir -p /etc/wireguard
+              # mkdir -p /etc/wireguard
               echo "$PRIVATE_KEY" > /etc/wireguard/privatekey
               echo "privatekey"
               echo "$PUBLIC_KEY" > /etc/wireguard/publickey
