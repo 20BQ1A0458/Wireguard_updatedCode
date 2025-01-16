@@ -43,18 +43,15 @@ spec:
                 && apt-get clean && rm -rf /var/lib/apt/lists/*
 
               # Generate WireGuard private and public keys
-              # ip link delete wg0 || true
+              ip link delete wg0 || true
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
               # Extract pod index from pod name (e.g., node-wireguard-0 or node-wireguard-1)
-              POD_NAME=$(kubectl get pod -o jsonpath='{.items[0].metadata.name}')
-              echo $POD_NAME
+              POD_NAME=${POD_NAME}
               POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
-              LISTEN_PORT=$((51820 + POD_INDEX))# Dynamically set port 51820, 51821, 51822
-              #LISTEN_PORT=51820
+              LISTEN_PORT=$((51820 + POD_INDEX)) # Dynamically set port 51820, 51821, 51822
               PEER_IP="10.8.0.$((1 + POD_INDEX))"
-              #PEER_IP="10.8.0.1"
 
               # Get the peer's public key (inject this dynamically, for now using a placeholder)
               PEER_PUBLIC_KEY=$(cat /etc/wireguard/peer-publickey.txt)  # Replace with dynamic injection if needed
@@ -69,7 +66,6 @@ spec:
               cat <<EOF > /etc/wireguard/wg0.conf
               [Interface]
               PrivateKey=$PRIVATE_KEY
-              # Address=10.8.0.1/24
               Address=10.8.0.$((1 + POD_INDEX))/24
               ListenPort=$LISTEN_PORT
               SaveConfig=true
