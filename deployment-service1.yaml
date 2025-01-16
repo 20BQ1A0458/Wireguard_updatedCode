@@ -171,7 +171,7 @@ spec:
       protocol: UDP
       port: 51822
       targetPort: 51822
-      nodePort: 30003  # NodePort for pod 2
+      nodePort: 30004  # NodePort for pod 2
 
 
 
