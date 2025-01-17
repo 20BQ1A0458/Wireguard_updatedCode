@@ -89,6 +89,10 @@ spec:
               protocol: UDP
             - containerPort: 51821  # WireGuard UDP port for pod 1
               protocol: UDP
+            - containerPort: 51822  # WireGuard UDP port for pod 1
+              protocol: UDP
+            - containerPort: 51823  # WireGuard UDP port for pod 1
+              protocol: UDP
           env:
             - name: NODE_ENV
               value: production
@@ -149,6 +153,16 @@ spec:
       port: 51821
       targetPort: 51821
       nodePort: 30003  # NodePort for pod 1
+    - name: udp-traffic-51822
+      protocol: UDP
+      port: 51822
+      targetPort: 51822
+      nodePort: 30004 
+    - name: udp-traffic-51823
+      protocol: UDP
+      port: 51823
+      targetPort: 51823
+      nodePort: 30005 
 
 
 
