@@ -14,16 +14,16 @@ spec:
       labels:
         app: node-wireguard
     spec:
-      # hostNetwork: true
-      # dnsPolicy: None
-      # dnsConfig:
-      #   nameservers:
-      #     - 8.8.8.8
-      #     - 1.1.1.1
-      #   searches:
-      #     - wireguard.svc.cluster.local
-      #     - svc.cluster.local
-      #     - cluster.local
+      #hostNetwork: true
+      #dnsPolicy: None
+      #dnsConfig:
+        #nameservers:
+          #- 8.8.8.8
+          #- 1.1.1.1
+        #searches:
+          #- wireguard.svc.cluster.local
+          #- svc.cluster.local
+          #- cluster.local
       serviceAccountName: jenkins
       initContainers:
         - name: wireguard-setup
@@ -52,7 +52,7 @@ spec:
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
-              # Extract pod index from pod name 
+              # Extract pod index from pod name (e.g., node-wireguard-0, node-wireguard-1)
               if [[ -z "$POD_NAME" ]]; then
                 echo "Error: POD_NAME is not set"
                 exit 1
@@ -64,11 +64,8 @@ spec:
                 exit 1
               fi
 
-              
               LISTEN_PORT=$((51820 + POD_INDEX))
-              # LISTEN_PORT=51820 
-              PEER_IP="10.8.0.$((1 + POD_INDEX)"
-              # PEER_IP="10.8.0.1"
+              PEER_IP="10.8.0.$((1 + POD_INDEX))"
 
               # Save the private and public keys to the container
               mkdir -p /etc/wireguard
@@ -136,6 +133,7 @@ spec:
       volumes:
         - name: wireguard-config
           emptyDir: {}
+
 ---
 
 apiVersion: v1
@@ -192,6 +190,7 @@ spec:
       port: 51824
       targetPort: 51824
       nodePort: 30006  # NodePort for pod 4
+
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
