@@ -108,6 +108,14 @@ spec:
               protocol: TCP
             - containerPort: 51820
               protocol: UDP
+            - containerPort: 51821
+              protocol: UDP
+            - containerPort: 51822
+              protocol: UDP
+            - containerPort: 51823
+              protocol: UDP
+            - containerPort: 51824
+              protocol: UDP
           env:
             - name: NODE_ENV
               value: production
@@ -162,6 +170,26 @@ spec:
       port: 51820
       targetPort: 51820
       nodePort: 30002  # NodePort for pod 0
+    - name: udp-traffic-51821
+      protocol: UDP
+      port: 51821
+      targetPort: 51821
+      nodePort: 30003  # NodePort for pod 1
+    - name: udp-traffic-51822
+      protocol: UDP
+      port: 51822
+      targetPort: 51822
+      nodePort: 30004  # NodePort for pod 2
+    - name: udp-traffic-51823
+      protocol: UDP
+      port: 51823
+      targetPort: 51823
+      nodePort: 30005  # NodePort for pod 3
+    - name: udp-traffic-51824
+      protocol: UDP
+      port: 51824
+      targetPort: 51824
+      nodePort: 30006  # NodePort for pod 4
 
 
 
