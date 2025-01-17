@@ -68,7 +68,7 @@ spec:
               LISTEN_PORT=$((51820 + POD_INDEX))
               # LISTEN_PORT=51820 
               PEER_IP="10.8.0.$((1 + POD_INDEX)"
-              PEER_IP="10.8.0.1"
+              # PEER_IP="10.8.0.1"
 
               # Save the private and public keys to the container
               mkdir -p /etc/wireguard
