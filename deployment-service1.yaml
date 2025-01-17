@@ -52,20 +52,23 @@ spec:
               PRIVATE_KEY=$(wg genkey)
               PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
 
-              # Extract pod index from pod name (e.g., node-wireguard-0, node-wireguard-1)
-              if [[ -z "$POD_NAME" ]]; then
-                echo "Error: POD_NAME is not set"
-                exit 1
-              fi
+              # # Extract pod index from pod name 
+              # if [[ -z "$POD_NAME" ]]; then
+              #   echo "Error: POD_NAME is not set"
+              #   exit 1
+              # fi
 
-              POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
-              if [[ -z "$POD_INDEX" ]]; then
-                echo "Error: Failed to extract POD_INDEX from POD_NAME"
-                exit 1
-              fi
+              # POD_INDEX=$(echo "$POD_NAME" | grep -oE '[0-9]+$')
+              # if [[ -z "$POD_INDEX" ]]; then
+              #   echo "Error: Failed to extract POD_INDEX from POD_NAME"
+              #   exit 1
+              # fi
 
-              LISTEN_PORT=$((51820 + POD_INDEX))
-              PEER_IP="10.8.0.$((1 + POD_INDEX))"
+              
+              # LISTEN_PORT=$((51820 + POD_INDEX))
+              LISTEN_PORT=51820 
+              # PEER_IP="10.8.0.$((1 + POD_INDEX)"
+              PEER_IP="10.8.0.1"
 
               # Save the private and public keys to the container
               mkdir -p /etc/wireguard
@@ -108,14 +111,14 @@ spec:
               protocol: TCP
             - containerPort: 51820
               protocol: UDP
-            - containerPort: 51821
-              protocol: UDP
-            - containerPort: 51822
-              protocol: UDP
-            - containerPort: 51823
-              protocol: UDP
-            - containerPort: 51824
-              protocol: UDP
+            # - containerPort: 51821
+            #   protocol: UDP
+            # - containerPort: 51822
+            #   protocol: UDP
+            # - containerPort: 51823
+            #   protocol: UDP
+            # - containerPort: 51824
+            #   protocol: UDP
           env:
             - name: NODE_ENV
               value: production
@@ -170,26 +173,26 @@ spec:
       port: 51820
       targetPort: 51820
       nodePort: 30002  # NodePort for pod 0
-    - name: udp-traffic-51821
-      protocol: UDP
-      port: 51821
-      targetPort: 51821
-      nodePort: 30003  # NodePort for pod 1
-    - name: udp-traffic-51822
-      protocol: UDP
-      port: 51822
-      targetPort: 51822
-      nodePort: 30004  # NodePort for pod 2
-    - name: udp-traffic-51823
-      protocol: UDP
-      port: 51823
-      targetPort: 51823
-      nodePort: 30005  # NodePort for pod 3
-    - name: udp-traffic-51824
-      protocol: UDP
-      port: 51824
-      targetPort: 51824
-      nodePort: 30006  # NodePort for pod 4
+    # - name: udp-traffic-51821
+    #   protocol: UDP
+    #   port: 51821
+    #   targetPort: 51821
+    #   nodePort: 30003  # NodePort for pod 1
+    # - name: udp-traffic-51822
+    #   protocol: UDP
+    #   port: 51822
+    #   targetPort: 51822
+    #   nodePort: 30004  # NodePort for pod 2
+    # - name: udp-traffic-51823
+    #   protocol: UDP
+    #   port: 51823
+    #   targetPort: 51823
+    #   nodePort: 30005  # NodePort for pod 3
+    # - name: udp-traffic-51824
+    #   protocol: UDP
+    #   port: 51824
+    #   targetPort: 51824
+    #   nodePort: 30006  # NodePort for pod 4
 
 
 
