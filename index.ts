@@ -157,8 +157,12 @@ function getPodName() {
 }
 
 async function getNodePort() {
+  var podName=await getPodName();
+  const match = podName.match(/\d+$/); // Matches digits at the end of the string
+  const lastNumber = match ? parseInt(match[0], 10) : null;
+  console.log(lastNumber)
   const serviceName = await executeCommand(
-    "kubectl get svc -n wireguard -o=jsonpath='{.items[?(@.spec.ports[0].protocol==\"UDP\")].metadata.name}'"
+    `kubectl get svc -n wireguard -o=jsonpath='{.items[?(@.spec.ports[${lastNumber}].protocol==\"UDP\")].metadata.name}'`
   )
   return await executeCommand(
     //here we are hardcoding the service name, you can pass it as an argument
