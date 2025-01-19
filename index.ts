@@ -168,7 +168,7 @@ async function getNodePort() {
 }
 
 function getHostName() {
-  return executeCommand("hostname");
+  return executeCommand("kubectl get pod $(hostname) -o jsonpath='{.spec.nodeName}'");
 }
 
 async function getExternalIP() {
