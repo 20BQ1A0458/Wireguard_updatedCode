@@ -88,7 +88,7 @@ spec:
               # Set up iptables for NAT and forwarding
               iptables -A FORWARD -i wg0 -j ACCEPT
               iptables -A FORWARD -o wg0 -j ACCEPT
-              iptables -t nat -A POSTROUTING -o eth+ -j MASQUERADE
+              iptables -t nat -A POSTROUTING -o ens+ -j MASQUERADE
               iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
 
               # Bring up the WireGuard interface
