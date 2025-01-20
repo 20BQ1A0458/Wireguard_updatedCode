@@ -83,6 +83,7 @@ spec:
 
               # Enable IP forwarding inside the container
               echo "1" > /proc/sys/net/ipv4/ip_forward
+              sysctl -p || true  # Ignore errors from sysctl due to container isolation
 
               # Set up iptables for NAT and forwarding
               iptables -A FORWARD -i wg0 -j ACCEPT
