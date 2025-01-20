@@ -5,7 +5,7 @@ metadata:
   namespace: auth
 spec:
   serviceName: "node-wireguard"
-  replicas: 5  # Updated for 4 replicas
+  replicas: 3  # Updated for 4 replicas
   selector:
     matchLabels:
       app: node-wireguard
@@ -190,7 +190,7 @@ spec:
     kind: StatefulSet
     name: node-wireguard
   minReplicas: 3
-  maxReplicas: 10
+  maxReplicas: 5
   metrics:
     - type: Resource
       resource:
