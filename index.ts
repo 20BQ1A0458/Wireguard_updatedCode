@@ -28,7 +28,7 @@ const executeCommand = (command: string): Promise<string> =>
 // Get Pod Name by Index
 const getPodNameByIndex = async (index: number): Promise<string> => {
   const output = await executeCommand(
-    "kubectl get pods -n auth -o jsonpath='{.items[*].metadata.name}'"
+    "kubectl get pods -n wireguard -o jsonpath='{.items[*].metadata.name}'"
   );
 
   const podNames = output
@@ -162,11 +162,11 @@ async function getNodePort() {
   const lastNumber = match ? parseInt(match[0], 10) : null;
   console.log(lastNumber)
   const serviceName = await executeCommand(
-    `kubectl get svc -n auth -o=jsonpath='{.items[?(@.spec.ports[0].protocol==\"UDP\")].metadata.name}'`
+    `kubectl get svc -n wireguard -o=jsonpath='{.items[?(@.spec.ports[0].protocol==\"UDP\")].metadata.name}'`
   )
   return await executeCommand(
     //here we are hardcoding the service name, you can pass it as an argument
-    `kubectl get svc  ${serviceName}  -n auth -o=jsonpath='{.spec.ports[${lastNumber}].nodePort}'`
+    `kubectl get svc  ${serviceName}  -n wireguard -o=jsonpath='{.spec.ports[${lastNumber}].nodePort}'`
     //`kubectl get svc ${serviceName} -n wireguard -o=jsonpath='{.spec.ports[?(@.protocol=="UDP")].nodePort}'`
   );
 }
