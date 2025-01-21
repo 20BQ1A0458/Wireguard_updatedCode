@@ -108,11 +108,11 @@ spec:
                 - NET_ADMIN  # Allow to manage networking inside the container
           resources:
             requests:
+              memory: "64Mi"
+              cpu: "30m"
+            limits:
               memory: "128Mi"
               cpu: "50m"
-            limits:
-              memory: "256Mi"
-              cpu: "100m"
           volumeMounts:
             - name: wireguard-config
               mountPath: /etc/wireguard
@@ -198,6 +198,13 @@ spec:
         target:
           type: Utilization
           averageUtilization: 50
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
+
 
 
 
