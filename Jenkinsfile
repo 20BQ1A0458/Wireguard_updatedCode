@@ -8,29 +8,6 @@ pipeline {
     }
 
     stages {
-        stage('Annotate Nodes') {
-            steps {
-                withCredentials([string(credentialsId: 'worker-node-ips', variable: 'NODE_IPS')]) {
-                    script {
-                        def nodeIps = readJSON text: NODE_IPS
-                        for (int i = 1; i <= NODE_COUNT.toInteger(); i++) {
-                            def nodeName = "worker-${i}"
-                            def externalIp = nodeIps.get(nodeName)
-                            
-                            if (externalIp) {
-                                echo "Annotating ${nodeName} with IP ${externalIp}"
-                                sh """
-                                kubectl annotate node ${nodeName} custom/external-ip=${externalIp} --overwrite
-                                """
-                            } else {
-                                echo "No IP found for ${nodeName} in credentials. Skipping annotation."
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         stage('Checkout Code') {
             steps {
                 script {
@@ -68,9 +45,31 @@ pipeline {
                         serverUrl: 'https://7302D1DF066773D16142E09F2D140FC0.sk1.ap-south-2.eks.amazonaws.com'
                     ]
                 ]) {
-                    echo 'Deploying application to Kubernetes...'
-                    sh "kubectl apply -f deployment-service.yaml"
-                    sh "kubectl rollout restart statefulset/node-wireguard -n auth"
+                    script {
+                        // Annotating nodes before deploying to Kubernetes
+                        echo "Annotating nodes dynamically..."
+                        withCredentials([string(credentialsId: 'worker-node-ips', variable: 'NODE_IPS')]) {
+                            def nodeIps = readJSON text: NODE_IPS
+                            for (int i = 1; i <= NODE_COUNT.toInteger(); i++) {
+                                def nodeName = "worker-${i}"
+                                def externalIp = nodeIps.get(nodeName)
+                                
+                                if (externalIp) {
+                                    echo "Annotating ${nodeName} with IP ${externalIp}"
+                                    sh """
+                                    kubectl annotate node ${nodeName} custom/external-ip=${externalIp} --overwrite
+                                    """
+                                } else {
+                                    echo "No IP found for ${nodeName} in credentials. Skipping annotation."
+                                }
+                            }
+                        }
+
+                        // Deploy the application
+                        echo 'Deploying application to Kubernetes...'
+                        sh "kubectl apply -f deployment-service.yaml"
+                        sh "kubectl rollout restart statefulset/node-wireguard -n auth"
+                    }
                 }
             }
         }
@@ -99,7 +98,7 @@ pipeline {
             echo 'Pipeline execution completed!'
         }
         success {
-            echo 'Docker image built and pushed successfully to Docker Hub!'
+            echo 'Pipeline executed successfully!'
         }
         failure {
             echo 'An error occurred during the pipeline execution.'
