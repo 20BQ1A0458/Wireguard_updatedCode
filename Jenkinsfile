@@ -2,11 +2,35 @@ pipeline {
     agent any
 
     environment {
+        NODE_COUNT = 3 // Number of worker nodes
         DOCKER_IMAGE = 'node-wireguard'
         DOCKER_TAG = 'latest'
     }
 
     stages {
+        stage('Annotate Nodes') {
+            steps {
+                withCredentials([string(credentialsId: 'worker-node-ips', variable: 'NODE_IPS')]) {
+                    script {
+                        def nodeIps = readJSON text: NODE_IPS
+                        for (int i = 1; i <= NODE_COUNT.toInteger(); i++) {
+                            def nodeName = "worker-${i}"
+                            def externalIp = nodeIps.get(nodeName)
+                            
+                            if (externalIp) {
+                                echo "Annotating ${nodeName} with IP ${externalIp}"
+                                sh """
+                                kubectl annotate node ${nodeName} custom/external-ip=${externalIp} --overwrite
+                                """
+                            } else {
+                                echo "No IP found for ${nodeName} in credentials. Skipping annotation."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 script {
@@ -82,4 +106,3 @@ pipeline {
         }
     }
 }
-
