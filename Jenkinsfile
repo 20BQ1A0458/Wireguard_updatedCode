@@ -44,26 +44,27 @@ pipeline {
                         namespace: 'auth', 
                         serverUrl: 'https://7302D1DF066773D16142E09F2D140FC0.sk1.ap-south-2.eks.amazonaws.com'
                     ]
-                ]) {
-                    script {
-                        // Annotating nodes before deploying to Kubernetes
-                        echo "Annotating nodes dynamically..."
-                        withCredentials([string(credentialsId: 'worker-node-ips', variable: 'NODE_IPS')]) {
-                            def nodeIps = readJSON text: NODE_IPS
-                            for (int i = 1; i <= NODE_COUNT.toInteger(); i++) {
-                                def nodeName = "worker-${i}"
-                                def externalIp = nodeIps.get(nodeName)
+                ]) 
+                // {
+                //     script {
+                //         // Annotating nodes before deploying to Kubernetes
+                //         echo "Annotating nodes dynamically..."
+                //         withCredentials([string(credentialsId: 'worker-node-ips', variable: 'NODE_IPS')]) {
+                //             def nodeIps = readJSON text: NODE_IPS
+                //             for (int i = 1; i <= NODE_COUNT.toInteger(); i++) {
+                //                 def nodeName = "worker-${i}"
+                //                 def externalIp = nodeIps.get(nodeName)
                                 
-                                if (externalIp) {
-                                    echo "Annotating ${nodeName} with IP ${externalIp}"
-                                    sh """
-                                    kubectl annotate node ${nodeName} custom/external-ip=${externalIp} --overwrite
-                                    """
-                                } else {
-                                    echo "No IP found for ${nodeName} in credentials. Skipping annotation."
-                                }
-                            }
-                        }
+                //                 if (externalIp) {
+                //                     echo "Annotating ${nodeName} with IP ${externalIp}"
+                //                     sh """
+                //                     kubectl annotate node ${nodeName} custom/external-ip=${externalIp} --overwrite
+                //                     """
+                //                 } else {
+                //                     echo "No IP found for ${nodeName} in credentials. Skipping annotation."
+                //                 }
+                //             }
+                //         }
 
                         // Deploy the application
                         echo 'Deploying application to Kubernetes...'
