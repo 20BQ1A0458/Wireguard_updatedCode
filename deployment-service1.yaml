@@ -5,7 +5,7 @@ metadata:
   namespace: wireguard
 spec:
   serviceName: "node-wireguard"
-  replicas: 3
+  replicas: 4
   selector:
     matchLabels:
       app: node-wireguard
@@ -209,31 +209,31 @@ spec:
 
 
 ---
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: node-wireguard-hpa
-  namespace: wireguard
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: StatefulSet
-    name: node-wireguard
-  minReplicas: 3
-  maxReplicas: 6
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 50
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 70
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: node-wireguard-hpa
+#   namespace: wireguard
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: StatefulSet
+#     name: node-wireguard
+#   minReplicas: 3
+#   maxReplicas: 6
+#   metrics:
+#     - type: Resource
+#       resource:
+#         name: cpu
+#         target:
+#           type: Utilization
+#           averageUtilization: 50
+#     - type: Resource
+#       resource:
+#         name: memory
+#         target:
+#           type: Utilization
+#           averageUtilization: 70
 
 
 
